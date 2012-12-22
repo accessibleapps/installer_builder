@@ -9,7 +9,7 @@ class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
  default_dll_excludes = ["powrprof.dll", "mswsock.dll"]
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, compressed=False, optimization_level=1, py2exe_datafile_packages=[]):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, optimization_level=1, py2exe_packages=None, py2exe_datafile_packages=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -20,8 +20,19 @@ class InstallerBuilder(object):
   if datafiles is None:
    datafiles = []
   self.datafiles = datafiles
+  if includes is None:
+   includes = []
+  self.includes = includes
+  if excludes is None:
+   excludes = []
+  self.excludes = excludes
   self.compressed = compressed
   self.optimization_level = optimization_level
+  if py2exe_packages is None:
+   self.py2exe_packages = py2exe_packages
+  self.py2exe_packages = py2exe_packages
+  if py2exe_datafile_packages is None:
+   py2exe_datafile_packages = []
   self.py2exe_datafile_packages = ['innosetup'] + py2exe_datafile_packages
 
  def build(self):
@@ -53,6 +64,9 @@ class InstallerBuilder(object):
    options = {
     'py2exe': {
      'compressed': self.compressed,
+     'includes': self.includes,
+     'excludes': self.excludes,
+     'packages': self.py2exe_packages,
      'dll_excludes': self.default_dll_excludes,
      'optimize': self.optimization_level,
      'skip_archive': True,
