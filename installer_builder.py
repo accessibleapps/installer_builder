@@ -1,9 +1,9 @@
 import setuptools
 import platform
 import shutil
-if platform.system == "Windows":
+if platform.system() == "Windows":
  import py2exe
-import innosetup
+ import innosetup
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']

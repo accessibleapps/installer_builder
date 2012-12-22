@@ -841,7 +841,7 @@ class InnoScript(object):
     handler([], fp)
     fp.write('\n')
 
- def compile(self):
+ def compile_script(self):
   subprocess.call([self.innoexepath, '/cc', self.issfile])
 
   outputdir = self.iss_metadata.get('OutputDir',
@@ -915,7 +915,7 @@ class innosetup(py2exe):
   print "*** creating the inno setup script ***"
   script.create()
   print "*** compiling the inno setup script ***"
-  script.compile()
+  script.compile_script()
 
 
 #
@@ -943,7 +943,8 @@ class PackagePathMap(object):
     modname = '.'.join(names[:i + 1])
     __import__(modname)
    return getattr(sys.modules[name], '__path__', [])[1:]
-  except ImportError:
+  except Exception as e:
+   print e
    pass
   return default
  def __setitem__(self, name, value):
