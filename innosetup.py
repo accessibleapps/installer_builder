@@ -1028,4 +1028,4 @@ def nuitka():
   os.remove(os.path.join('dist', f)+"o")
 
 def py2exe_datafiles():
- return [("", [r"c:\mingw\bin\libstdc++-6.dll", r"c:\mingw\bin\libgcc_s_dw2-1.dll"])]
+ return [] #return [("", [r"c:\mingw\bin\libstdc++-6.dll", r"c:\mingw\bin\libgcc_s_dw2-1.dll"])]
