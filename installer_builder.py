@@ -81,3 +81,22 @@ class InstallerBuilder(object):
     'dest_base': self.name,
    }],
   )
+
+class AppInstallerBuilder(InstallerBuilder):
+
+ def __init__(self, application=None, **kwargs):
+  self.application = application
+  new_kwargs = {}
+  new_kwargs['name'] = application.name
+  new_kwargs['version'] = getattr(application, 'version', None)
+  new_kwargs['url'] = getattr(application, 'url', None)
+  datafiles = kwargs.get('datafiles', [])
+  config_spec = getattr(application, 'config_spec', None)
+  if config_spec is True:
+   config_spec = "%s.confspec" % application.name
+  if config_spec is not None:
+   datafiles.extend([('', [config_spec])])
+  kwargs['datafiles'] = datafiles
+  new_kwargs.update(kwargs)
+  super(AppInstallerBuilder, self).__init__(**new_kwargs)
+
