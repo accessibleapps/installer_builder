@@ -1,3 +1,4 @@
+
 """distutils extension module - create an installer by InnoSetup.
 
 Requirements
@@ -168,6 +169,8 @@ from xml.etree import ElementTree
 import win32api # for read pe32 resource
 from py2exe.build_exe import *
 from py2exe import build_exe, mf as modulefinder
+from platform_utils import paths
+
 
 
 DEFAULT_ISS = ""
@@ -546,8 +549,8 @@ class InnoScript(object):
     break
 
   # Python 2.6 doesn't support Windows 9x and me.
-  if sys.version_info > (2, 6):
-   iss_metadata['MinVersion'] = '5.0,5.0'
+  #if sys.version_info > (2, 6):
+   #iss_metadata['MinVersion'] = '5.0,5.0'
 
   # handle user operations
   user = {}
@@ -812,7 +815,7 @@ class InnoScript(object):
   # write "#define CONSTANT value"
   consts = self.iss_consts
   consts.update({
-   'PYTHON_VERION': '%d.%d' % sys.version_info[:2],
+   'PYTHON_VERSION': '%d.%d' % sys.version_info[:2],
    'PYTHON_VER': '%d%d' % sys.version_info[:2],
    'PYTHON_DIR': sys.prefix,
    'PYTHON_DLL': modname(sys.dllhandle),
@@ -956,6 +959,7 @@ modulefinder.packagePathMap = PackagePathMap()
 # fix a problem that `py2exe` includes MinWin's ApiSet Stub DLLs on Windows 7.
 #
 # http://www.avertlabs.com/research/blog/index.php/2010/01/05/windows-7-kernel-api-refactoring/
+"""
 if sys.getwindowsversion()[:2] >= (6, 1):
  build_exe._isSystemDLL = build_exe.isSystemDLL
  def isSystemDLL(pathname):
@@ -973,7 +977,7 @@ if sys.getwindowsversion()[:2] >= (6, 1):
   return False
  build_exe.isSystemDLL = isSystemDLL
 
-
+"""
 if __name__ == '__main__':
  sys.modules['innosetup'] = sys.modules[__name__]
  from distutils.core import setup
@@ -1028,4 +1032,4 @@ def nuitka():
   os.remove(os.path.join('dist', f)+"o")
 
 def py2exe_datafiles():
- return [] #return [("", [r"c:\mingw\bin\libstdc++-6.dll", r"c:\mingw\bin\libgcc_s_dw2-1.dll"])]
+ return [("", [os.path.join(paths.module_path(), r"lib\libstdc++-6.dll"), os.path.join(paths.module_path(), r"lib\libgcc_s_dw2-1.dll")])]

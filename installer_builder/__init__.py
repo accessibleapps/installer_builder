@@ -1,9 +1,10 @@
 import setuptools
+import importlib
 import platform
 import shutil
 if platform.system() == "Windows":
  import py2exe
- import innosetup
+ import installer_builder.innosetup
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
@@ -29,11 +30,11 @@ class InstallerBuilder(object):
   self.compressed = compressed
   self.optimization_level = optimization_level
   if py2exe_packages is None:
-   self.py2exe_packages = py2exe_packages
+   py2exe_packages = []
   self.py2exe_packages = py2exe_packages
   if py2exe_datafile_packages is None:
    py2exe_datafile_packages = []
-  self.py2exe_datafile_packages = ['innosetup'] + py2exe_datafile_packages
+  self.py2exe_datafile_packages = ['installer_builder.innosetup'] + py2exe_datafile_packages
 
  def build(self):
   self.remove_previous_build()
@@ -47,7 +48,7 @@ class InstallerBuilder(object):
  def find_datafiles(self):
   datafiles = []
   for package in self.py2exe_datafile_packages:
-   pkg = __import__(package)
+   pkg = importlib.import_module(package)
    datafiles.extend(pkg.py2exe_datafiles())
   return self.datafiles + datafiles
 
