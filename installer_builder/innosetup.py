@@ -916,7 +916,6 @@ class innosetup(py2exe):
   compath = os.path.join('dist', 'win32com', 'gen_py')
   if os.path.isdir(compath):
    shutil.rmtree(compath)
-  nuitka()
   script = InnoScript(self)
   print "*** creating the inno setup script ***"
   script.create()

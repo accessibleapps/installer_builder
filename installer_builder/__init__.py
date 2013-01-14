@@ -8,7 +8,7 @@ if platform.system() == "Windows":
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
- default_dll_excludes = ["powrprof.dll", "mswsock.dll"]
+ default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
 
  def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, optimization_level=1, py2exe_packages=None, py2exe_datafile_packages=None):
   super(InstallerBuilder, self).__init__()
@@ -71,7 +71,7 @@ class InstallerBuilder(object):
      'packages': self.py2exe_packages,
      'dll_excludes': self.default_dll_excludes,
      'optimize': self.optimization_level,
-     'skip_archive': True,
+     #'skip_archive': True,
     },
     'py2app': {
      'argv_emulation': True,
