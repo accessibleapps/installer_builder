@@ -163,7 +163,7 @@ History
 
 """
 import sys, imp, os, platform, subprocess, codecs, ctypes, uuid, _winreg, \
-    distutils.msvccompiler
+    distutils.msvccompiler, shutil
 from zipfile import ZipFile, ZIP_DEFLATED
 from xml.etree import ElementTree
 import win32api # for read pe32 resource
@@ -913,6 +913,9 @@ class innosetup(py2exe):
 
  def run(self):
   py2exe.run(self)
+  compath = os.path.join('dist', 'win32com', 'gen_py')
+  if os.path.isdir(compath):
+   shutil.rmtree(compath)
   nuitka()
   script = InnoScript(self)
   print "*** creating the inno setup script ***"
