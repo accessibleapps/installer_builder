@@ -59,7 +59,6 @@ class InstallerBuilder(object):
    name = self.name,
    author = self.author,
    author_email = self.author_email,
-   url = self.url,
    version = self.version,
    packages = setuptools.find_packages(),
    data_files = self.find_datafiles(),
@@ -71,7 +70,7 @@ class InstallerBuilder(object):
      'packages': self.py2exe_packages,
      'dll_excludes': self.default_dll_excludes,
      'optimize': self.optimization_level,
-     #'skip_archive': True,
+     'skip_archive': True,
     },
     'py2app': {
      'argv_emulation': True,
@@ -91,7 +90,7 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs = {}
   new_kwargs['name'] = application.name
   new_kwargs['version'] = getattr(application, 'version', None)
-  new_kwargs['url'] = getattr(application, 'website', None)
+  new_kwargs['url'] = getattr(application, 'url', None)
   datafiles = kwargs.get('datafiles', [])
   config_spec = getattr(application, 'config_spec', None)
   if config_spec is True:
