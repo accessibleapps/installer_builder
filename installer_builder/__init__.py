@@ -10,7 +10,7 @@ class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, optimization_level=1, py2exe_packages=None, py2exe_datafile_packages=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, optimization_level=1, py2exe_packages=None, datafile_packages=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -32,9 +32,9 @@ class InstallerBuilder(object):
   if py2exe_packages is None:
    py2exe_packages = []
   self.py2exe_packages = py2exe_packages
-  if py2exe_datafile_packages is None:
-   py2exe_datafile_packages = []
-  self.py2exe_datafile_packages = ['installer_builder.innosetup'] + py2exe_datafile_packages
+  if datafile_packages is None:
+   datafile_packages = []
+  self.datafile_packages = datafile_packages
 
  def build(self):
   self.remove_previous_build()
@@ -47,7 +47,7 @@ class InstallerBuilder(object):
 
  def find_datafiles(self):
   datafiles = []
-  for package in self.py2exe_datafile_packages:
+  for package in self.datafile_packages:
    pkg = importlib.import_module(package)
    datafiles.extend(pkg.py2exe_datafiles())
   return self.datafiles + datafiles
@@ -73,6 +73,10 @@ class InstallerBuilder(object):
      'skip_archive': True,
     },
     'py2app': {
+     'compressed': self.compressed,
+     'includes': self.includes,
+     'excludes': self.excludes,
+     'optimize': self.optimization_level,
      'argv_emulation': True,
      'app': [self.main_module],
     }
