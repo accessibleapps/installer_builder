@@ -10,7 +10,6 @@ setup(
  version = __version__,
  description = __doc__,
  packages = find_packages(),
- data_files = [('installer_builder/lib', [os.path.join("installer_builder", "lib", "libstdc++-6.dll"), os.path.join('installer_builder', 'lib', 'libgcc_s_dw2-1.dll')])],
  install_requires = [
   'setuptools',
  ],

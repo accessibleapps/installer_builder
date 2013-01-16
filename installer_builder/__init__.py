@@ -76,10 +76,9 @@ class InstallerBuilder(object):
     },
     'py2app': {
      'compressed': self.compressed,
-     'includes': self.includes,
+     'includes': self.includes + self.extra_packages,
      'excludes': self.excludes,
      'optimize': self.optimization_level,
-     'packages': self.extra_packages,
      'argv_emulation': True,
      'app': [self.main_module],
     }
