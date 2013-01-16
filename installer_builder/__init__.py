@@ -49,7 +49,7 @@ class InstallerBuilder(object):
   datafiles = []
   for package in self.datafile_packages:
    pkg = importlib.import_module(package)
-   datafiles.extend(pkg.py2exe_datafiles())
+   datafiles.extend(pkg.find_datafiles())
   return self.datafiles + datafiles
 
  def build_installer(self):
