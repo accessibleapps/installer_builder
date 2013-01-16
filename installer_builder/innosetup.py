@@ -1006,32 +1006,3 @@ if __name__ == '__main__':
    ],
   py_modules=['innosetup', ],
   )
-
-
-import os
-import sys
-import subprocess
-def nuitka():
- pyfiles=[]
- for dirpath, dirnames, filenames in os.walk('.'):
-  if 'build' in dirnames: dirnames.remove('build')
-  if 'dist' in dirnames: dirnames.remove('dist')
-  for fn in filenames:
-   if fn == '__init__.py': continue
-   if not fn.endswith('.py'): continue
-   fp = os.path.join(dirpath, fn)
-   if not os.path.exists(os.path.join('dist', fp+"O")):
-    filenames.remove(fn)
-   else:
-    pyfiles.append(fp)
-
- print "nuitka"
- for f in pyfiles:
-  print f
-  dn = os.path.dirname(f)
-  if subprocess.call(['nuitka', '--remove-output', '--output-dir='+os.path.join('dist', dn), f],shell=True) != 0:
-   raise SystemError
-  os.remove(os.path.join('dist', f)+"o")
-
-def py2exe_datafiles():
- return [("", [os.path.join(paths.module_path(), r"lib\libstdc++-6.dll"), os.path.join(paths.module_path(), r"lib\libgcc_s_dw2-1.dll")])]
