@@ -42,8 +42,10 @@ class InstallerBuilder(object):
 
 
  def remove_previous_build(self):
+  print "Removing previous output directories"
   for directory in self.build_dirs:
    shutil.rmtree(directory, ignore_errors=True)
+   print "Deleted ", directory
 
  def find_datafiles(self):
   datafiles = []
