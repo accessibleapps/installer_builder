@@ -99,12 +99,16 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs['version'] = getattr(application, 'version', None)
   new_kwargs['url'] = getattr(application, 'url', None)
   datafiles = kwargs.get('datafiles', [])
+  extra_packages = kwargs.get('extra_packages', [])
   config_spec = getattr(application, 'config_spec', None)
   if config_spec is True:
    config_spec = "%s.confspec" % application.name
   if config_spec is not None:
    datafiles.extend([('', [config_spec])])
   kwargs['datafiles'] = datafiles
+  if hasattr(application, 'activation_module'):
+   extra_packages.append('product_key') #Because it's not picked up on OSX.
+   kwargs['extra_packages'] = extra_packages
   new_kwargs.update(kwargs)
   super(AppInstallerBuilder, self).__init__(**new_kwargs)
 
