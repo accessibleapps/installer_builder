@@ -10,7 +10,7 @@ class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=True, optimization_level=1, extra_packages=None, datafile_packages=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, optimization_level=1, extra_packages=None, datafile_packages=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
