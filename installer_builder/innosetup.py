@@ -456,25 +456,16 @@ class InnoScript(object):
    return self.builder.inno_setup_exe
 
   result = getregvalue(
-   'HKCR\\InnoSetupScriptFile\\shell\\compile\\command\\')
-  if result:
-   if result.startswith('"'):
-    result = result[1:].split('"', 1)[0]
-   else:
-    result = result.split()[0]
-   return result
-
-  result = getregvalue(
    'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
    '\\Uninstall\\Inno Setup 5_is1\\InstallLocation')
   if result:
-   return os.path.join(result, 'Compil32.exe')
+   return os.path.join(result, 'ISCC.exe')
 
   result = getregvalue(
    'HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows'
    '\\CurrentVersion\\Uninstall\\Inno Setup 5_is1\\InstallLocation')
   if result:
-   return os.path.join(result, 'Compil32.exe')
+   return os.path.join(result, 'ISCC.exe')
 
   return ''
 
@@ -845,7 +836,7 @@ class InnoScript(object):
     fp.write('\n')
 
  def compile_script(self):
-  subprocess.call([self.innoexepath, '/cc', self.issfile])
+  subprocess.call([self.innoexepath, self.issfile])
 
   outputdir = self.iss_metadata.get('OutputDir',
    os.path.join(os.path.dirname(self.issfile), 'Output'))
