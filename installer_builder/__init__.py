@@ -1,7 +1,9 @@
 import setuptools
+import datetime
 import importlib
 import platform
 import shutil
+import time
 if platform.system() == "Windows":
  import py2exe
  import installer_builder.innosetup
@@ -36,11 +38,13 @@ class InstallerBuilder(object):
   if datafile_packages is None:
    datafile_packages = []
   self.datafile_packages = datafile_packages
+  self.build_start_time = None
 
  def build(self):
+  self.build_start_time = time.time()
   self.remove_previous_build()
   self.build_installer()
-
+  self.report_build_statistics()
 
  def remove_previous_build(self):
   print "Removing previous output directories"
@@ -54,6 +58,11 @@ class InstallerBuilder(object):
    pkg = importlib.import_module(package)
    datafiles.extend(pkg.find_datafiles())
   return self.datafiles + datafiles
+
+ def report_build_statistics(self):
+  build_time = time.time() - self.build_start_time
+  td = datetime.timedelta(seconds=build_time)
+  print "Build completed in ", format(td)
 
  def build_installer(self):
   if None in (self.name, self.main_module):
