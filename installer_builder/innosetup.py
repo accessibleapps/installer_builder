@@ -475,8 +475,12 @@ class InnoScript(object):
   vcver = '%.2d' % (distutils.msvccompiler.get_build_version() * 10, )
   assemblename = 'Microsoft.VC%s.CRT' % vcver
   msvcr = getattr(ctypes.windll, 'msvcr' + vcver)
+  msvcp = getattr(ctypes.windll, 'msvcp' + vcver)
   vcrname = modname(msvcr._handle)
   yield vcrname
+  vcpname = modname(msvcp._handle)
+  yield vcpname 
+
 
   # bundled file
   manifestfile = os.path.join(os.path.dirname(vcrname),
