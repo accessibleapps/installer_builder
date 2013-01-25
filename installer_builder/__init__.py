@@ -12,7 +12,7 @@ class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, optimization_level=1, extra_packages=None, datafile_packages=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -31,6 +31,7 @@ class InstallerBuilder(object):
   self.excludes = excludes
   self.compressed = compressed
   self.skip_archive = skip_archive
+  self.bundle_level = bundle_level
   self.optimization_level = optimization_level
   if extra_packages is None:
    extra_packages = []
@@ -78,6 +79,7 @@ class InstallerBuilder(object):
    options = {
     'py2exe': {
      'compressed': self.compressed,
+     'bundle_files': self.bundle_level,
      'includes': self.includes,
      'excludes': self.excludes,
      'packages': self.extra_packages,
@@ -87,6 +89,7 @@ class InstallerBuilder(object):
     },
     'py2app': {
      'compressed': self.compressed,
+     'bundle_files': self.bundle_level,
      'includes': self.includes + self.extra_packages,
      'excludes': self.excludes,
      'optimize': self.optimization_level,
