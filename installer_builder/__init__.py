@@ -12,7 +12,7 @@ class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, frameworks=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -39,6 +39,9 @@ class InstallerBuilder(object):
   if datafile_packages is None:
    datafile_packages = []
   self.datafile_packages = datafile_packages
+  if frameworks is None:
+   frameworks = []
+  self.frameworks = frameworks
   self.build_start_time = None
 
  def build(self):
@@ -91,6 +94,7 @@ class InstallerBuilder(object):
      'compressed': self.compressed,
      'includes': self.includes + self.extra_packages,
      'excludes': self.excludes,
+     'frameworks': self.frameworks,
      'optimize': self.optimization_level,
      'argv_emulation': True,
      'app': [self.main_module],
