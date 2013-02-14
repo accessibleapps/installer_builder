@@ -125,6 +125,11 @@ class InstallerBuilder(object):
   subprocess.check_call([command], shell=True)
 
  def report_build_statistics(self):
+  print "Generated installer filename: %s" % self.find_created_installer()
+  print "Generated installer filesize: %s" % format_filesize(os.stat(self.find_created_installer()).st_size)
+  self.report_build_time()
+
+ def report_build_time(self):
   build_time = time.time() - self.build_start_time
   td = datetime.timedelta(seconds=build_time)
   print "Build completed in ", format(td)
@@ -195,3 +200,9 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs.update(kwargs)
   super(AppInstallerBuilder, self).__init__(**new_kwargs)
 
+
+def format_filesize(num):
+ for x in ['bytes','KB','MB','GB','TB']:
+  if num < 1024.0:
+   return "%3.1f %s" % (num, x)
+  num /= 1024.0
