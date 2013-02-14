@@ -49,9 +49,14 @@ class InstallerBuilder(object):
 
  def build(self):
   self.build_start_time = time.time()
+  self.prebuild_message()
   self.remove_previous_build()
   self.build_installer()
   self.report_build_statistics()
+
+ def prebuild_message(self):
+  print "Installer builder version %s" % __version__
+  print "Building %s installer..." % platform.system()
 
  def remove_previous_build(self):
   print "Removing previous output directories"
@@ -82,6 +87,7 @@ class InstallerBuilder(object):
    version = self.version,
    packages = setuptools.find_packages(),
    data_files = self.find_datafiles(),
+   app = [self.main_module],
    options = {
     'py2exe': {
      'compressed': self.compressed,
@@ -100,7 +106,6 @@ class InstallerBuilder(object):
      'frameworks': self.frameworks,
      'optimize': self.optimization_level,
      'argv_emulation': True,
-     'app': [self.main_module],
      'plist': {
       'CFBundleName': self.name,
       'CFBundleShortVersionString': self.version,
