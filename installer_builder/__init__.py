@@ -6,18 +6,19 @@ import platform
 import shutil
 import subprocess
 import time
+import os
 if platform.system() == "Windows":
  import py2exe
  import installer_builder.innosetup
 
-__version__ = 0.25
+__version__ = 0.3
 
 
 class InstallerBuilder(object):
- build_dirs = ['build', 'dist', 'release', 'update']
+ build_dirs = ['build', 'dist', 'update']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, postbuild_commands=None, osx_frameworks=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', postbuild_commands=None, osx_frameworks=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -44,6 +45,7 @@ class InstallerBuilder(object):
   if datafile_packages is None:
    datafile_packages = []
   self.datafile_packages = datafile_packages
+  self.output_directory = output_directory
   if postbuild_commands is None:
    postbuild_commands = {}
   self.postbuild_commands = collections.defaultdict(list)
@@ -58,6 +60,7 @@ class InstallerBuilder(object):
   self.prebuild_message()
   self.remove_previous_build()
   self.build_installer()
+  self.finalize_build()
   self.perform_postbuild_commands()
   self.report_build_statistics()
 
@@ -67,7 +70,8 @@ class InstallerBuilder(object):
 
  def remove_previous_build(self):
   print "Removing previous output directories"
-  for directory in self.build_dirs:
+  directories = self.build_dirs + [self.output_directory]
+  for directory in directories:
    print "Deleting %s" % directory
    shutil.rmtree(directory, ignore_errors=True)
    print "Deleted ", directory
@@ -78,6 +82,37 @@ class InstallerBuilder(object):
    pkg = importlib.import_module(package)
    datafiles.extend(pkg.find_datafiles())
   return self.datafiles + datafiles
+
+ def finalize_build(self):
+  print "Finalizing build..."
+  if platform.system() == 'Darwin':
+   self.create_dmg()
+  self.move_output()
+
+ def create_dmg(self):
+  print "Creating .dmg disk image"
+  self.execute_command(   'hdiutil create -srcfolder dist/%s.app -size 150m dist/%s' % (self.name, self.installer_filename()))
+
+ def move_output(self):
+  os.mkdir(self.output_directory)
+  destination = os.path.join(self.output_directory, self.installer_filename())
+  os.rename(self.find_created_installer(), destination)
+  print "Moved generated installer to %s" % destination
+
+
+ def find_created_installer(self):
+  res = os.path.join('dist', self.installer_filename())
+  if not os.path.exists(res):
+   res = os.path.join(self.output_directory, self.installer_filename())
+   if not os.path.exists(res):
+    raise RuntimeError("Installer %s does not exist" % res)
+  return res
+
+ def installer_filename(self):
+  if platform.system() == 'Windows':
+   return '%s-%s-setup.exe' % (self.name, self.version)
+  elif platform.system() == 'Darwin':
+   return '%s-%s.dmg' % (self.name, self.version)
 
  def perform_postbuild_commands(self):
   if not self.postbuild_commands[platform.system().lower()]:
