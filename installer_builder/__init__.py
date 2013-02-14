@@ -86,8 +86,17 @@ class InstallerBuilder(object):
  def finalize_build(self):
   print "Finalizing build..."
   if platform.system() == 'Darwin':
+   self.remove_embedded_interpreter()
    self.create_dmg()
   self.move_output()
+
+ def remove_embedded_interpreter(self):
+  print "Replacing the embedded interpreter with a dumby file"
+  interpreter_path = os.path.join('dist', '%s.app' % self.name, 'Contents', 'MacOS', 'python')
+  os.remove(interpreter_path)
+  self.execute_command('touch %s' % interpreter_path)
+  self.execute_command('chmod +x %s' % interpreter_path)
+
 
  def create_dmg(self):
   print "Creating .dmg disk image"
