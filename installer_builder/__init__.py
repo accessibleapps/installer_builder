@@ -1,21 +1,23 @@
 import setuptools
+import collections
 import datetime
 import importlib
 import platform
 import shutil
+import subprocess
 import time
 if platform.system() == "Windows":
  import py2exe
  import installer_builder.innosetup
 
-__version__ = 0.24
+__version__ = 0.25
 
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, frameworks=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, postbuild_commands=None, osx_frameworks=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -42,9 +44,13 @@ class InstallerBuilder(object):
   if datafile_packages is None:
    datafile_packages = []
   self.datafile_packages = datafile_packages
-  if frameworks is None:
-   frameworks = []
-  self.frameworks = frameworks
+  if postbuild_commands is None:
+   postbuild_commands = {}
+  self.postbuild_commands = collections.defaultdict(list)
+  self.postbuild_commands.update(postbuild_commands)
+  if osx_frameworks is None:
+   osx_frameworks = []
+  self.osx_frameworks = osx_frameworks
   self.build_start_time = None
 
  def build(self):
@@ -52,6 +58,7 @@ class InstallerBuilder(object):
   self.prebuild_message()
   self.remove_previous_build()
   self.build_installer()
+  self.perform_postbuild_commands()
   self.report_build_statistics()
 
  def prebuild_message(self):
@@ -71,6 +78,16 @@ class InstallerBuilder(object):
    pkg = importlib.import_module(package)
    datafiles.extend(pkg.find_datafiles())
   return self.datafiles + datafiles
+
+ def perform_postbuild_commands(self):
+  if not self.postbuild_commands[platform.system().lower()]:
+   return
+  print "Performing postbuild commands for platform %s" % platform.system()
+  for command in self.postbuild_commands[platform.system().lower()]:
+   self.execute_command(command)
+
+ def execute_command(self, command):
+  subprocess.check_call([command], shell=True)
 
  def report_build_statistics(self):
   build_time = time.time() - self.build_start_time
@@ -104,7 +121,7 @@ class InstallerBuilder(object):
      'compressed': self.compressed,
      'includes': self.includes + self.extra_packages,
      'excludes': self.excludes,
-     'frameworks': self.frameworks,
+     'frameworks': self.osx_frameworks,
      'optimize': self.optimization_level,
      'argv_emulation': True,
      'plist': {
