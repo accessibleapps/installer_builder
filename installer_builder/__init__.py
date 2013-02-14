@@ -8,6 +8,9 @@ if platform.system() == "Windows":
  import py2exe
  import installer_builder.innosetup
 
+__version__ = 0.24
+
+
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist', 'release', 'update']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
