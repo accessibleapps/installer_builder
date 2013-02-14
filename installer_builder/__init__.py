@@ -98,7 +98,13 @@ class InstallerBuilder(object):
      'optimize': self.optimization_level,
      'argv_emulation': True,
      'app': [self.main_module],
-    }
+     'plist': {
+      'CFBundleName': self.name,
+      'CFBundleShortVersionString': self.version,
+      'CFBundleGetInfoString': '%s %s' % (self.name, self.version),
+      'CFBundleExecutable': self.name,
+     },
+    },
    },
    windows = [{
     'script': self.main_module,
