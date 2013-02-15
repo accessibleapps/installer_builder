@@ -11,14 +11,15 @@ if platform.system() == "Windows":
  import py2exe
  import installer_builder.innosetup
 
-__version__ = 0.3
-
+__version__ = 0.31
 
 class InstallerBuilder(object):
- build_dirs = ['build', 'dist', 'update']
+ build_dirs = ['build', 'dist']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
+ update_archive_format = 'zip'
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', postbuild_commands=None, osx_frameworks=None):
+
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=True, postbuild_commands=None, osx_frameworks=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -46,6 +47,7 @@ class InstallerBuilder(object):
    datafile_packages = []
   self.datafile_packages = datafile_packages
   self.output_directory = output_directory
+  self.create_update = create_update
   if postbuild_commands is None:
    postbuild_commands = {}
   self.postbuild_commands = collections.defaultdict(list)
@@ -89,6 +91,8 @@ class InstallerBuilder(object):
    self.remove_embedded_interpreter()
    self.create_dmg()
   self.move_output()
+  if self.create_update:
+   self.create_update_archive()
 
  def remove_embedded_interpreter(self):
   print "Replacing the embedded interpreter with a dumby file"
@@ -96,7 +100,6 @@ class InstallerBuilder(object):
   os.remove(interpreter_path)
   self.execute_command('touch %s' % interpreter_path)
   self.execute_command('chmod +x %s' % interpreter_path)
-
 
  def create_dmg(self):
   print "Creating .dmg disk image"
@@ -108,6 +111,14 @@ class InstallerBuilder(object):
   os.rename(self.find_created_installer(), destination)
   print "Moved generated installer to %s" % destination
 
+ def create_update_archive(self):
+  print "Generating update archive"
+  name = '%s-%s-%s' % (self.name, self.version, platform.system())
+  filename = shutil.make_archive(name, self.update_archive_format, root_dir='dist')
+  filename = os.path.split(filename)[-1]
+  destination = os.path.join(self.output_directory, filename)
+  os.rename(filename, destination)
+  print "Generated update archive filename: %s" % destination
 
  def find_created_installer(self):
   res = os.path.join('dist', self.installer_filename())
