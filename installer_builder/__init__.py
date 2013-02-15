@@ -11,7 +11,7 @@ if platform.system() == "Windows":
  import py2exe
  import installer_builder.innosetup
 
-__version__ = 0.31
+__version__ = 0.32
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -68,7 +68,7 @@ class InstallerBuilder(object):
 
  def prebuild_message(self):
   print "Installer builder version %s" % __version__
-  print "Building %s installer..." % platform.system()
+  print "Building %s installer for %s %s" % (platform.system(), self.name, self.version)
 
  def remove_previous_build(self):
   print "Removing previous output directories"
@@ -114,7 +114,10 @@ class InstallerBuilder(object):
  def create_update_archive(self):
   print "Generating update archive"
   name = '%s-%s-%s' % (self.name, self.version, platform.system())
-  filename = shutil.make_archive(name, self.update_archive_format, root_dir='dist')
+  root_dir = 'dist'
+  if platform.system() == 'Darwin':
+   root_dir = os.path.join(root_dir, '%s.app' % self.name)
+  filename = shutil.make_archive(name, self.update_archive_format, root_dir=root_dir)
   filename = os.path.split(filename)[-1]
   destination = os.path.join(self.output_directory, filename)
   os.rename(filename, destination)
