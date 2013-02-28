@@ -143,7 +143,7 @@ class InstallerBuilder(object):
  def get_command_class(self):
   if platform.system() == 'Windows':
    return installer_builder.innosetup.innosetup
-  elif platform.system == 'Darwin':
+  elif platform.system() == 'Darwin':
    return py2app.build_app.py2app
 
  def perform_postbuild_commands(self):
