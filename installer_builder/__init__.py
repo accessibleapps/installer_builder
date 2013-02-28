@@ -10,13 +10,17 @@ import os
 if platform.system() == "Windows":
  import py2exe
  import installer_builder.innosetup
+if platform.system() == 'Darwin':
+ import py2app
 
-__version__ = 0.32
+
+__version__ = 0.33
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
  update_archive_format = 'zip'
+ build_command = 'release'
 
 
  def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=True, postbuild_commands=None, osx_frameworks=None):
@@ -137,6 +141,12 @@ class InstallerBuilder(object):
   elif platform.system() == 'Darwin':
    return '%s-%s.dmg' % (self.name, self.version)
 
+ def get_command_class(self):
+  if platform.system() == 'Windows':
+   return installer_builder.innosetup.innosetup
+  elif platform.system == 'Darwin':
+   return py2app.build_app.py2app
+
  def perform_postbuild_commands(self):
   if not self.postbuild_commands[platform.system().lower()]:
    return
@@ -199,6 +209,7 @@ class InstallerBuilder(object):
     'script': self.main_module,
     'dest_base': self.name,
    }],
+   cmdclass = {self.build_command: self.get_command_class()},
   )
 
 class AppInstallerBuilder(InstallerBuilder):
