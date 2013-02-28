@@ -11,8 +11,7 @@ if platform.system() == "Windows":
  import py2exe
  import installer_builder.innosetup
 if platform.system() == 'Darwin':
- import py2app
-
+ import py2app.build_app
 
 __version__ = 0.33
 
