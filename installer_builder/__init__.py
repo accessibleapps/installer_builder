@@ -1,4 +1,5 @@
 import setuptools
+import __builtin__
 import collections
 import datetime
 import importlib
@@ -8,12 +9,16 @@ import subprocess
 import time
 import os
 if platform.system() == "Windows":
- import py2exe
  import installer_builder.innosetup
 if platform.system() == 'Darwin':
  import py2app.build_app
 
 __version__ = 0.33
+
+if '_' not in __builtin__.__dict__:
+ __builtin__.__dict__['_'] = lambda x: x
+ __builtin__.__dict__['__'] = lambda x: x
+ __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
