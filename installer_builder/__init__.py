@@ -13,7 +13,7 @@ if platform.system() == "Windows":
 if platform.system() == 'Darwin':
  import py2app.build_app
 
-__version__ = 0.33
+__version__ = 0.34
 
 if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['_'] = lambda x: x
@@ -225,6 +225,7 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs['version'] = getattr(application, 'version', None)
   new_kwargs['url'] = getattr(application, 'website', None)
   datafiles = kwargs.get('datafiles', [])
+  datafile_packages = kwargs.get('datafile_packages', [])
   extra_packages = kwargs.get('extra_packages', [])
   config_spec = getattr(application, 'config_spec', None)
   if config_spec is True:
@@ -232,6 +233,13 @@ class AppInstallerBuilder(InstallerBuilder):
   if config_spec is not None:
    datafiles.extend([('', [config_spec])])
   kwargs['datafiles'] = datafiles
+  if hasattr(application, 'output'):
+   datafile_packages.append('accessible_output2')
+  if hasattr(application, 'sound') or hasattr(application, 'UI_sounds'):
+   datafile_packages.append('sound_lib')
+  if hasattr(application, 'update_endpoint'):
+   datafile_packages.append('autoupdate')
+  kwargs['datafile_packages'] = datafile_packages
   if hasattr(application, 'activation_module'):
    extra_packages.append('product_key') #Because it's not picked up on OSX.
    kwargs['extra_packages'] = extra_packages
