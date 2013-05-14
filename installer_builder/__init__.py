@@ -13,7 +13,7 @@ if platform.system() == "Windows":
 if platform.system() == 'Darwin':
  import py2app.build_app
 
-__version__ = 0.34
+__version__ = 0.35
 
 if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['_'] = lambda x: x
@@ -23,6 +23,7 @@ if '_' not in __builtin__.__dict__:
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
+ default_excludes = ['doctest', 'email.test', 'win32pipe', 'win32wnet', 'win32com.gen_py', ]
  update_archive_format = 'zip'
  build_command = 'release'
 
@@ -43,6 +44,7 @@ class InstallerBuilder(object):
   self.includes = includes
   if excludes is None:
    excludes = []
+  excludes.extend(self.default_excludes)
   self.excludes = excludes
   self.compressed = compressed
   self.skip_archive = skip_archive
