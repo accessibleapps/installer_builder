@@ -802,7 +802,8 @@ class InnoScript(object):
    inno_script = open(inno_script).read()
   else:
    inno_script = self.builder.inno_script
-
+  if self.builder.extra_inno_script is not None:
+   inno_script += "\n%s" % self.builder.extra_inno_script
   fp = IssFile(self.issfile, 'w')
 #  fp.write(codecs.BOM_UTF8)
 #  fp.write('; This file is created by distutils InnoSetup extension.\n')
@@ -873,6 +874,8 @@ class innosetup(py2exe):
    'a path to InnoSetup exe file (Compil32.exe)'),
   ('inno-script=', None,
    'a path to InnoSetup script file or an InnoSetup script string'),
+  ('extra-inno-script=', None,
+   'an InnoSetup script string'),
   ('bundle-vcr=', None,
    'bundle msvc*XX.dll and mfc*.dll and their manifest files'),
    ('zip=', None, 'zip setup file'),
@@ -890,6 +893,7 @@ class innosetup(py2exe):
   py2exe.initialize_options(self)
   self.inno_setup_exe = ''
   self.inno_script = ''
+  self.extra_inno_script = None
   self.bundle_vcr = True
   self.zip = False
   self.regist_startup = False
@@ -947,6 +951,7 @@ class PackagePathMap(object):
    print e
    pass
   return default
+
  def __setitem__(self, name, value):
   packagePathMap[name] = value
 modulefinder.packagePathMap = PackagePathMap()
@@ -959,6 +964,7 @@ modulefinder.packagePathMap = PackagePathMap()
 """
 if sys.getwindowsversion()[:2] >= (6, 1):
  build_exe._isSystemDLL = build_exe.isSystemDLL
+
  def isSystemDLL(pathname):
   if build_exe._isSystemDLL(pathname):
    return True
