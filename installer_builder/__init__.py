@@ -23,7 +23,7 @@ if '_' not in __builtin__.__dict__:
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
- default_excludes = ['bdb', 'doctest', 'email.test', 'pdb', 'win32pipe', 'win32wnet', 'win32com.gen_py', ]
+ default_excludes = ['bdb', 'doctest', 'email.test', 'pdb', 'pywin.dialogs', 'win32pipe', 'win32wnet', 'win32com.gen_py', ]
  update_archive_format = 'zip'
  build_command = 'release'
 
