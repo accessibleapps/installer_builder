@@ -28,7 +28,7 @@ class InstallerBuilder(object):
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=True, postbuild_commands=None, osx_frameworks=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=True, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -65,6 +65,7 @@ class InstallerBuilder(object):
   if osx_frameworks is None:
    osx_frameworks = []
   self.osx_frameworks = osx_frameworks
+  self.extra_inno_script = extra_inno_script
   self.build_start_time = None
 
  def build(self):
@@ -195,6 +196,9 @@ class InstallerBuilder(object):
      'dll_excludes': self.default_dll_excludes,
      'optimize': self.optimization_level,
      'skip_archive': self.skip_archive,
+    },
+    'innosetup': {
+     'extra_inno_script': self.extra_inno_script,
     },
     'py2app': {
      'compressed': self.compressed,
