@@ -961,7 +961,6 @@ modulefinder.packagePathMap = PackagePathMap()
 # fix a problem that `py2exe` includes MinWin's ApiSet Stub DLLs on Windows 7.
 #
 # http://www.avertlabs.com/research/blog/index.php/2010/01/05/windows-7-kernel-api-refactoring/
-"""
 if sys.getwindowsversion()[:2] >= (6, 1):
  build_exe._isSystemDLL = build_exe.isSystemDLL
 
@@ -980,7 +979,6 @@ if sys.getwindowsversion()[:2] >= (6, 1):
   return False
  build_exe.isSystemDLL = isSystemDLL
 
-"""
 if __name__ == '__main__':
  sys.modules['innosetup'] = sys.modules[__name__]
  from distutils.core import setup
