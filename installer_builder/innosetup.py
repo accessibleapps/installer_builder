@@ -965,6 +965,8 @@ if sys.getwindowsversion()[:2] >= (6, 1):
  build_exe._isSystemDLL = build_exe.isSystemDLL
 
  def isSystemDLL(pathname):
+  if 'msvc' in pathname.lower():
+   return False
   if build_exe._isSystemDLL(pathname):
    return True
   try:
