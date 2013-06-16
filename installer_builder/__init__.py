@@ -14,6 +14,7 @@ if platform.system() == 'Darwin':
  import py2app.build_app
 
 __version__ = 0.36
+__doc__ = """Easily generate installers for multiple platforms"""
 
 if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['_'] = lambda x: x
