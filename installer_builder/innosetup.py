@@ -384,7 +384,7 @@ class InnoScript(object):
   )
  metadata_map.update(consts_map)
  required_sections = (
-  'Setup', 'Files', 'Run', 'UninstallRun', 'Languages', 'Icons', 'Code',
+  'Setup', 'Files', 'Run', 'UninstallRun', 'Languages', 'Icons', 'Code', 'tasks',
   )
  default_flags = (
   'ignoreversion', 'overwritereadonly', 'uninsremovereadonly',
@@ -776,7 +776,11 @@ class InnoScript(object):
   #Desktop icon
   fp.issline(Name='{commondesktop}\\%s' % self.metadata['name'],
   filename='{app}\\%s' % filename,
-  WorkingDir='{app}')
+  WorkingDir='{app}', tasks='desktopicon')
+
+ def handle_iss_tasks(self, lines, fp):
+  self.handle_iss(lines, fp)
+  fp.issline(Name='desktopicon', Description='{cm:CreateDesktopIcon}', GroupDescription='{cm:AdditionalIcons}')
 
  def handle_iss_languages(self, lines, fp):
   self.handle_iss(lines, fp)
