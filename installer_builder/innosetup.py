@@ -773,6 +773,10 @@ class InnoScript(object):
      Name="{commonstartup}\\%s" % self.metadata['name'],
      Filename="{app}\\%s" % filename,
      )
+  #Desktop icon
+  fp.issline(Name='{commondesktop}\\%s' % self.metadata['name'],
+  filename='{app}\\%s' % filename,
+  WorkingDir='{app}')
 
  def handle_iss_languages(self, lines, fp):
   self.handle_iss(lines, fp)
