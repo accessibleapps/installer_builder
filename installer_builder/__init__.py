@@ -29,7 +29,7 @@ class InstallerBuilder(object):
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=True, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -246,6 +246,7 @@ class AppInstallerBuilder(InstallerBuilder):
    datafile_packages.append('sound_lib')
   if hasattr(application, 'update_endpoint'):
    datafile_packages.append('autoupdate')
+   new_kwargs['create_update'] = True
   kwargs['datafile_packages'] = datafile_packages
   if hasattr(application, 'activation_module'):
    extra_packages.append('product_key') #Because it's not picked up on OSX.
