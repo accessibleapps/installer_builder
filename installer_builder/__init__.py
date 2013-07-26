@@ -13,7 +13,7 @@ if platform.system() == "Windows":
 if platform.system() == 'Darwin':
  import py2app.build_app
 
-__version__ = 0.36
+__version__ = 0.37
 __doc__ = """Easily generate installers for multiple platforms"""
 
 if '_' not in __builtin__.__dict__:
@@ -23,6 +23,7 @@ if '_' not in __builtin__.__dict__:
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
+ dist_dir = 'dist'
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
  default_excludes = ['bdb', 'doctest', 'email.test', 'pdb', 'pywin.dialogs', 'win32pipe', 'win32wnet', 'win32com.gen_py', ]
  update_archive_format = 'zip'
@@ -101,17 +102,25 @@ class InstallerBuilder(object):
   print "Finalizing build..."
   if platform.system() == 'Darwin':
    self.remove_embedded_interpreter()
+   self.shrink_mac_binaries()
+   self.lipo_file(os.path.join(self.get_app_path(), self.name))
    self.create_dmg()
   self.move_output()
   if self.create_update:
    self.create_update_archive()
 
+
  def remove_embedded_interpreter(self):
   print "Replacing the embedded interpreter with a dumby file"
-  interpreter_path = os.path.join('dist', '%s.app' % self.name, 'Contents', 'MacOS', 'python')
+  interpreter_path = os.path.join(self.get_app_path(), 'python')
   os.remove(interpreter_path)
   self.execute_command('touch %s' % interpreter_path)
   self.execute_command('chmod +x %s' % interpreter_path)
+
+ def get_app_path(self):
+  if platform.system == 'Darwin':
+   return os.path.join(self.dist_dir, '%s.app' % self.name, 'Contents', 'MacOS')
+  return self.dist_dir
 
  def create_dmg(self):
   print "Creating .dmg disk image"
@@ -126,7 +135,7 @@ class InstallerBuilder(object):
  def create_update_archive(self):
   print "Generating update archive"
   name = '%s-%s-%s' % (self.name, self.version, platform.system())
-  root_dir = 'dist'
+  root_dir = self.dist_dir
   if platform.system() == 'Darwin':
    root_dir = os.path.join(root_dir, '%s.app' % self.name)
   filename = shutil.make_archive(name, self.update_archive_format, root_dir=root_dir)
@@ -169,6 +178,18 @@ class InstallerBuilder(object):
   print "Generated installer filename: %s" % self.find_created_installer()
   print "Generated installer filesize: %s" % format_filesize(os.stat(self.find_created_installer()).st_size)
   self.report_build_time()
+
+ def shrink_mac_binaries(self):
+  shrink_extensions = ('.dylib', '.so')
+  for basepath, dirs, files in os.walk(self.dist_dir):
+   for file in files:
+    if os.path.splitext(file)[-1] in shrink_extensions:
+     path = os.path.join(basepath, file)
+     self.lipo_file(path)
+
+ def lipo_file(self, filename):
+  self.execute_command('lipo -thin i386 %s -output %s' % (filename, filename))
+  print "Lipoed file %s" % filename
 
  def report_build_time(self):
   build_time = time.time() - self.build_start_time
