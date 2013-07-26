@@ -118,7 +118,7 @@ class InstallerBuilder(object):
   self.execute_command('chmod +x %s' % interpreter_path)
 
  def get_app_path(self):
-  if platform.system == 'Darwin':
+  if platform.system() == 'Darwin':
    return os.path.join(self.dist_dir, '%s.app' % self.name, 'Contents', 'MacOS')
   return self.dist_dir
 
