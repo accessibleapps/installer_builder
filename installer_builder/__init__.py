@@ -30,7 +30,7 @@ class InstallerBuilder(object):
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -69,6 +69,7 @@ class InstallerBuilder(object):
   self.osx_frameworks = osx_frameworks
   self.extra_inno_script = extra_inno_script
   self.build_start_time = None
+  self.register_startup = register_startup
 
  def build(self):
   self.build_start_time = time.time()
@@ -221,6 +222,7 @@ class InstallerBuilder(object):
     },
     'innosetup': {
      'extra_inno_script': self.extra_inno_script,
+     'register_startup': self.register_startup,
     },
     'py2app': {
      'compressed': self.compressed,
@@ -273,6 +275,8 @@ class AppInstallerBuilder(InstallerBuilder):
    extra_packages.append('product_key') #Because it's not picked up on OSX.
    kwargs['extra_packages'] = extra_packages
   new_kwargs.update(kwargs)
+  if hasattr(application, 'register_startup'):
+   new_kwargs['register_startup'] = application.register_startup
   super(AppInstallerBuilder, self).__init__(**new_kwargs)
 
 

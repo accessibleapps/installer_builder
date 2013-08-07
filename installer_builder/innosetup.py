@@ -70,7 +70,7 @@ import os
     # zip setup file
     'zip': False, # default is False, bool() or zip file name
     # create shortcut to startup if you want. 
-    'regist_startup': True, # default is False
+    'register_startup': True, # default is False
     }
    },
   com_server=[
@@ -384,7 +384,7 @@ class InnoScript(object):
   )
  metadata_map.update(consts_map)
  required_sections = (
-  'Setup', 'Files', 'Run', 'UninstallRun', 'Languages', 'Icons', 'Code', 'tasks',
+  'Setup', 'Files', 'Run', 'UninstallRun', 'Languages', 'Icons', 'Code', 'tasks', 'registry',
   )
  default_flags = (
   'ignoreversion', 'overwritereadonly', 'uninsremovereadonly',
@@ -768,11 +768,6 @@ class InnoScript(object):
     Name="{group}\\Uninstall %s" % self.metadata['name'],
     Filename="{uninstallexe}",
     )
-   if self.builder.regist_startup:
-    fp.issline(
-     Name="{commonstartup}\\%s" % self.metadata['name'],
-     Filename="{app}\\%s" % filename,
-     )
   #Desktop icon
   fp.issline(Name='{commondesktop}\\%s' % self.metadata['name'],
   filename='{app}\\%s' % filename,
@@ -781,6 +776,13 @@ class InnoScript(object):
  def handle_iss_tasks(self, lines, fp):
   self.handle_iss(lines, fp)
   fp.issline(Name='desktopicon', Description='{cm:CreateDesktopIcon}', GroupDescription='{cm:AdditionalIcons}')
+  if self.builder.register_startup:
+   fp.issline(Name='startup', Description='Run at startup')
+
+ def handle_iss_registry(self, lines, fp):
+  if self.builder.register_startup:
+   self.handle_iss(lines, fp)
+   fp.issline(Root="HKCU", Subkey="Software\\Microsoft\\Windows\\CurrentVersion\\Run", ValueType="string", ValueName=self.metadata['name'], ValueData="{app}\%s.exe" % self.metadata['name'], Flags='uninsdeletevalue', Tasks='startup')
 
  def handle_iss_languages(self, lines, fp):
   self.handle_iss(lines, fp)
@@ -904,7 +906,7 @@ class innosetup(py2exe):
   self.extra_inno_script = None
   self.bundle_vcr = True
   self.zip = False
-  self.regist_startup = False
+  self.register_startup = False
   self.fileinfo = {}
   self.modules = {}
 
