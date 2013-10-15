@@ -612,7 +612,7 @@ class InnoScript(object):
    place = ''
 
    if os.path.isfile(filename):
-    if README_EXT in filename:
+    if 'readme' in filename.lower() and filename.lower().endswith(README_EXT):
      flags.append('isreadme')
     if os.path.splitext(relname)[1].lower() in self.bin_exts:
      flags.append('restartreplace')

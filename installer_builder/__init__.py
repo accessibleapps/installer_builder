@@ -13,7 +13,7 @@ if platform.system() == "Windows":
 if platform.system() == 'Darwin':
  import py2app.build_app
 
-__version__ = 0.37
+__version__ = 0.371
 __doc__ = """Easily generate installers for multiple platforms"""
 
 if '_' not in __builtin__.__dict__:
