@@ -24,13 +24,14 @@ if '_' not in __builtin__.__dict__:
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
  dist_dir = 'dist'
+ locale_dir = 'locale'
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
  default_excludes = ['bdb', 'doctest', 'email.test', 'pdb', 'pywin.dialogs', 'win32pipe', 'win32wnet', 'win32com.gen_py', ]
  update_archive_format = 'zip'
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, has_translations=False):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -70,6 +71,7 @@ class InstallerBuilder(object):
   self.extra_inno_script = extra_inno_script
   self.build_start_time = None
   self.register_startup = register_startup
+  self.has_translations = has_translations
 
  def build(self):
   self.build_start_time = time.time()
@@ -97,8 +99,21 @@ class InstallerBuilder(object):
   for package in self.datafile_packages:
    pkg = importlib.import_module(package)
    datafiles.extend(pkg.find_datafiles())
+  if self.has_translations:
+   datafiles.extend(self.find_application_language_data())
   return self.datafiles + datafiles
 
+ def find_application_language_data(self):
+  for dirpath, dirnames, filenames in os.walk(self.locale_dir):
+   res = []
+   for filename in filenames:
+    path = os.path.join(dirpath, filename)
+    if filename.lower().endswith('.mo'):
+     res.append(path)
+   if res:
+    yield(dirpath, res)
+
+  
  def finalize_build(self):
   print "Finalizing build..."
   if platform.system() == 'Darwin':
@@ -277,6 +292,7 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs.update(kwargs)
   if hasattr(application, 'register_startup'):
    new_kwargs['register_startup'] = application.register_startup
+  new_kwargs['has_translations'] = True
   super(AppInstallerBuilder, self).__init__(**new_kwargs)
 
 
