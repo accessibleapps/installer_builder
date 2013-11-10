@@ -13,7 +13,7 @@ if platform.system() == "Windows":
 if platform.system() == 'Darwin':
  import py2app.build_app
 
-__version__ = 0.371
+__version__ = 0.38
 __doc__ = """Easily generate installers for multiple platforms"""
 
 if '_' not in __builtin__.__dict__:
@@ -31,7 +31,7 @@ class InstallerBuilder(object):
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, has_translations=False):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -71,6 +71,9 @@ class InstallerBuilder(object):
   self.extra_inno_script = extra_inno_script
   self.build_start_time = None
   self.register_startup = register_startup
+  if localized_packages is None:
+   localized_packages = []
+  self.localized_packages = localized_packages
   self.has_translations = has_translations
 
  def build(self):
@@ -101,19 +104,31 @@ class InstallerBuilder(object):
    datafiles.extend(pkg.find_datafiles())
   if self.has_translations:
    datafiles.extend(self.find_application_language_data())
+  for package in self.localized_packages:
+   pkg = importlib.import_module(package)
+   path = pkg.__path__[0]
+   locale_path = os.path.join(path, self.locale_dir)
+   files = self.find_locale_data(locale_path)
+   datafiles.extend(list(files))
+   print "Added locale data for %s" % package
   return self.datafiles + datafiles
 
  def find_application_language_data(self):
-  for dirpath, dirnames, filenames in os.walk(self.locale_dir):
-   res = []
+  for directory, filenames in self.find_locale_data(self.locale_dir):
+   yield directory, filenames
+
+ def find_locale_data(self, locale_path):
+  for dirpath, dirnames, filenames in os.walk(locale_path):
+   files = []
    for filename in filenames:
     path = os.path.join(dirpath, filename)
     if filename.lower().endswith('.mo'):
-     res.append(path)
-   if res:
-    yield(dirpath, res)
+     files.append(path)
+   if files:
+    directory = os.path.join(self.locale_dir, os.path.relpath(dirpath, start=locale_path))
+    yield directory, files
 
-  
+
  def finalize_build(self):
   print "Finalizing build..."
   if platform.system() == 'Darwin':
@@ -272,6 +287,7 @@ class AppInstallerBuilder(InstallerBuilder):
   datafiles = kwargs.get('datafiles', [])
   datafile_packages = kwargs.get('datafile_packages', [])
   extra_packages = kwargs.get('extra_packages', [])
+  localized_packages = kwargs.get('localized_packages', [])
   config_spec = getattr(application, 'config_spec', None)
   if config_spec is True:
    config_spec = "%s.confspec" % application.name
@@ -288,7 +304,12 @@ class AppInstallerBuilder(InstallerBuilder):
   kwargs['datafile_packages'] = datafile_packages
   if hasattr(application, 'activation_module'):
    extra_packages.append('product_key') #Because it's not picked up on OSX.
-   kwargs['extra_packages'] = extra_packages
+  kwargs['extra_packages'] = extra_packages
+  if hasattr(application, 'activation_module'):
+   localized_packages.append('product_key')
+  if hasattr(application, 'main_window_class'):
+   localized_packages.append('wx')
+  kwargs['localized_packages'] = localized_packages
   new_kwargs.update(kwargs)
   if hasattr(application, 'register_startup'):
    new_kwargs['register_startup'] = application.register_startup
