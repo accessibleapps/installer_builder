@@ -286,6 +286,7 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs['url'] = getattr(application, 'website', None)
   datafiles = kwargs.get('datafiles', [])
   datafile_packages = kwargs.get('datafile_packages', [])
+  includes = kwargs.get('includes', [])
   extra_packages = kwargs.get('extra_packages', [])
   localized_packages = kwargs.get('localized_packages', [])
   config_spec = getattr(application, 'config_spec', None)
@@ -313,6 +314,9 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs.update(kwargs)
   if hasattr(application, 'register_startup'):
    new_kwargs['register_startup'] = application.register_startup
+  if hasattr(application, 'debug_port') or hasattr(application, 'debug_host'):
+   includes.append('SocketServer') #not picked up on Mac
+  new_kwargs['includes'] = includes
   new_kwargs['has_translations'] = True
   super(AppInstallerBuilder, self).__init__(**new_kwargs)
 
