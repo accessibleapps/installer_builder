@@ -18,6 +18,8 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
+__version__ = 0.38
+
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
  dist_dir = 'dist'
