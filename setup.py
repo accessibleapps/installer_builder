@@ -1,9 +1,11 @@
 from setuptools import setup, find_packages
-from installer_builder import __doc__, __version__
 import os
 
 
 __name__ = "installer_builder"
+__version__ = 0.38
+__doc__ = """Easily generate installers for multiple platforms"""
+
 
 
 setup(
