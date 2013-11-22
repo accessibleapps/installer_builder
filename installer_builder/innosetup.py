@@ -780,8 +780,8 @@ class InnoScript(object):
    fp.issline(Name='startup', Description='Run at startup')
 
  def handle_iss_registry(self, lines, fp):
+  self.handle_iss(lines, fp)
   if self.builder.register_startup:
-   self.handle_iss(lines, fp)
    fp.issline(Root="HKCU", Subkey="Software\\Microsoft\\Windows\\CurrentVersion\\Run", ValueType="string", ValueName=self.metadata['name'], ValueData="{app}\%s.exe" % self.metadata['name'], Flags='uninsdeletevalue', Tasks='startup')
 
  def handle_iss_languages(self, lines, fp):
