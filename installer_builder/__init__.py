@@ -293,6 +293,8 @@ class AppInstallerBuilder(InstallerBuilder):
    config_spec = "%s.confspec" % application.name
   if config_spec is not None:
    datafiles.extend([('', [config_spec])])
+  import babel
+  datafiles.extend([('babel', [os.path.join(babel.__path__[0], 'global.dat')])])
   kwargs['datafiles'] = datafiles
   if hasattr(application, 'output'):
    datafile_packages.append('accessible_output2')
@@ -309,6 +311,7 @@ class AppInstallerBuilder(InstallerBuilder):
    localized_packages.append('product_key')
   if hasattr(application, 'main_window_class'):
    localized_packages.append('wx')
+   localized_packages.append('app_elements')
   kwargs['localized_packages'] = localized_packages
   new_kwargs.update(kwargs)
   if hasattr(application, 'register_startup'):
