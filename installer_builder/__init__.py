@@ -271,6 +271,7 @@ class InstallerBuilder(object):
    windows = [{
     'script': self.main_module,
     'dest_base': self.name,
+    'company_name': self.author,
    }],
    cmdclass = {self.build_command: self.get_command_class()},
   )
@@ -283,6 +284,7 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs['name'] = application.name
   new_kwargs['version'] = getattr(application, 'version', None)
   new_kwargs['url'] = getattr(application, 'website', None)
+  new_kwargs['author'] = getattr(application, 'author', None)
   datafiles = kwargs.get('datafiles', [])
   datafile_packages = kwargs.get('datafile_packages', [])
   includes = kwargs.get('includes', [])
