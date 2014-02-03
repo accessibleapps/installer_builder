@@ -98,6 +98,8 @@ class InstallerBuilder(object):
 
  def find_datafiles(self):
   datafiles = []
+  from requests import __file__ as requests_path
+  datafiles.extend([os.path.join(os.path.dirname(requests_path), 'cacert.pem')])
   for package in self.datafile_packages:
    pkg = importlib.import_module(package)
    datafiles.extend(pkg.find_datafiles())
