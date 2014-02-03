@@ -98,8 +98,6 @@ class InstallerBuilder(object):
 
  def find_datafiles(self):
   datafiles = []
-  from requests import __file__ as requests_path
-  datafiles.extend([os.path.join(os.path.dirname(requests_path), 'cacert.pem')])
   for package in self.datafile_packages:
    pkg = importlib.import_module(package)
    datafiles.extend(pkg.find_datafiles())
@@ -299,6 +297,8 @@ class AppInstallerBuilder(InstallerBuilder):
    datafiles.extend([('', [config_spec])])
   import babel
   datafiles.extend([('babel', [os.path.join(babel.__path__[0], 'global.dat')])])
+  from requests import __file__ as requests_path
+  datafiles.extend([('', [os.path.join(os.path.dirname(requests_path), 'cacert.pem')])])
   kwargs['datafiles'] = datafiles
   if hasattr(application, 'output'):
    datafile_packages.append('accessible_output2')
