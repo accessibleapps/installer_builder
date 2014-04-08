@@ -308,15 +308,20 @@ class AppInstallerBuilder(InstallerBuilder):
    datafile_packages.append('autoupdate')
    new_kwargs['create_update'] = True
   kwargs['datafile_packages'] = datafile_packages
+  includes = kwargs.get('includes', [])
   if hasattr(application, 'activation_module'):
    extra_packages.append('product_key') #Because it's not picked up on OSX.
+   includes.append(application.activation_module)
   kwargs['extra_packages'] = extra_packages
   if hasattr(application, 'activation_module'):
    localized_packages.append('product_key')
   if hasattr(application, 'main_window_class'):
    localized_packages.append('wx')
    localized_packages.append('app_elements')
+   if isinstance(application.main_window_class, basestring):
+    includes.append('.'.join(application.main_window_class.split('.')[:-1]))
   kwargs['localized_packages'] = localized_packages
+  kwargs['includes'] = includes
   new_kwargs.update(kwargs)
   if hasattr(application, 'register_startup'):
    new_kwargs['register_startup'] = application.register_startup
