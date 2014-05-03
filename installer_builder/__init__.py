@@ -2,6 +2,7 @@ import setuptools
 import __builtin__
 import collections
 import datetime
+import glob
 import importlib
 import platform
 import shutil
@@ -103,6 +104,7 @@ class InstallerBuilder(object):
    datafiles.extend(pkg.find_datafiles())
   if self.has_translations:
    datafiles.extend(self.find_application_language_data())
+   datafiles.extend(self.find_babel_datafiles())
   for package in self.localized_packages:
    pkg = importlib.import_module(package)
    path = pkg.__path__[0]
@@ -115,6 +117,10 @@ class InstallerBuilder(object):
  def find_application_language_data(self):
   for directory, filenames in self.find_locale_data(self.locale_dir):
    yield directory, filenames
+
+ def find_babel_datafiles(self):
+  import babel
+  return ('localedata', glob.glob(os.path.join(babel.__path__[0], 'localedata', '*.*'))),
 
  def find_locale_data(self, locale_path):
   for dirpath, dirnames, filenames in os.walk(locale_path):
@@ -288,6 +294,9 @@ class AppInstallerBuilder(InstallerBuilder):
   datafiles = kwargs.get('datafiles', [])
   datafile_packages = kwargs.get('datafile_packages', [])
   includes = kwargs.get('includes', [])
+  has_translations = kwargs.get('has_translations', False)
+  if has_translations:
+   includes.append('babel.plural')
   extra_packages = kwargs.get('extra_packages', [])
   localized_packages = kwargs.get('localized_packages', [])
   config_spec = getattr(application, 'config_spec', None)
@@ -328,7 +337,6 @@ class AppInstallerBuilder(InstallerBuilder):
   if hasattr(application, 'debug_port') or hasattr(application, 'debug_host'):
    includes.append('SocketServer') #not picked up on Mac
   new_kwargs['includes'] = includes
-  new_kwargs['has_translations'] = True
   super(AppInstallerBuilder, self).__init__(**new_kwargs)
 
 
