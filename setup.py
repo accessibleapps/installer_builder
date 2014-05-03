@@ -13,9 +13,6 @@ setup(
  version = __version__,
  description = __doc__,
  packages = find_packages(),
- install_requires = [
-  'distribute <= 0.6.49',
- ],
  classifiers = [
   'Development Status :: 3 - Alpha',
   'Intended Audience :: Developers',
