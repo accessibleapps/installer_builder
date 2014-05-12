@@ -19,7 +19,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.381
+__version__ = 0.382
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -345,3 +345,18 @@ def format_filesize(num):
   if num < 1024.0:
    return "%3.1f %s" % (num, x)
   num /= 1024.0
+
+def standard_wx_excludes():
+ return ['wx.py', 'wx.stc', ]
+
+def sqlite_sqlalchemy_excludes():
+ return ['sqlalchemy.testing', 'sqlalchemy.dialects.postgresql', 'sqlalchemy.dialects.mysql', 'sqlalchemy.dialects.oracle', 'sqlalchemy.dialects.mssql', 'sqlalchemy.dialects.firebird', 'sqlalchemy.dialects.sybase', 'sqlalchemy.dialects.drizzle', ]
+
+def app_framework_excludes():
+ return ['watchdog', 'yappi', 'pytest', 'pyreadline', 'nose', ]
+
+def stdlib_excludes():
+ return ['email.test', 'ftplib', 'tarfile', ]
+
+def win32_excludes():
+ return ['win32pipe', 'win32wnet', ]
