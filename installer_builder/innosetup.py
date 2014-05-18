@@ -231,6 +231,11 @@ manifest.template = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
    />
  </dependentAssembly>
 </dependency>
+<application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+        <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+    </windowsSettings>
+</application>
 </assembly>"""
 
 
