@@ -359,4 +359,4 @@ def stdlib_excludes():
  return ['email.test', 'ftplib', 'tarfile', ]
 
 def win32_excludes():
- return ['win32pipe', 'win32wnet', ]
+ return ['win32pipe', 'win32wnet', 'win32evtlog', ]
