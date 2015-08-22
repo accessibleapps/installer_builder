@@ -277,6 +277,7 @@ class InstallerBuilder(object):
    windows = [{
     'script': self.main_module,
     'dest_base': self.name,
+    'other_resources': [innosetup.manifest(self.name)],
     'company_name': self.author,
    }],
    cmdclass = {self.build_command: self.get_command_class()},
