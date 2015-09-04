@@ -19,14 +19,14 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.39
+__version__ = 0.391
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
  dist_dir = 'dist'
  locale_dir = 'locale'
  default_dll_excludes = ['mpr.dll', 'powrprof.dll', 'mswsock.dll']
- default_excludes = ['bdb', 'doctest', 'email.test', 'pdb', 'pywin.dialogs', 'win32pipe', 'win32wnet', 'win32com.gen_py', ]
+ default_excludes = ['email.test', 'pywin.dialogs', 'win32pipe', 'win32wnet', 'win32com.gen_py', ]
  update_archive_format = 'zip'
  build_command = 'release'
 
@@ -357,7 +357,7 @@ def app_framework_excludes():
  return ['watchdog', 'yappi', 'pytest', 'pyreadline', 'nose', ]
 
 def stdlib_excludes():
- return ['email.test', 'ftplib', 'tarfile', ]
+ return ['doctest', 'email.test', 'ftplib', 'tarfile', 'bdb', 'pdb', ]
 
 def win32_excludes():
  return ['win32pipe', 'win32wnet', 'win32evtlog', ]
