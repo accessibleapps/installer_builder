@@ -2,6 +2,7 @@ import setuptools
 import __builtin__
 import collections
 import datetime
+import fnmatch
 import glob
 import importlib
 import platform
@@ -9,6 +10,7 @@ import shutil
 import subprocess
 import time
 import os
+import sys
 if platform.system() == "Windows":
  import installer_builder.innosetup
 if platform.system() == 'Darwin':
@@ -361,3 +363,26 @@ def stdlib_excludes():
 
 def win32_excludes():
  return ['win32pipe', 'win32wnet', 'win32evtlog', ]
+
+def get_datafiles(directory="share", match="*", target_path=None):
+	"""builds list of data files to be included with data_files in setuptools
+	A typical task in a setup.py file is to set the path and name of a list
+	of data files to provide with the package. For instance files in share/data
+	directory. One difficulty is to find those files recursively. This can be
+	achieved with os.walk or glob. Here is a simple function that perform this
+	task.
+
+	.. todo:: exclude pattern
+	"""
+	ppath = os.path.split(os.path.abspath(sys.executable))[0]
+	site_packages = os.path.join(ppath, 'lib', 'site-packages', '')
+	datafiles = []
+	matches = []
+	for root, dirnames, filenames in os.walk(directory):
+		target_path = root.replace(site_packages, '')
+		for filename in fnmatch.filter(filenames, match):
+			matches.append(os.path.join(root, filename))
+			this_filename = os.path.join(root, filename)
+			datafiles.append((target_path, [this_filename]))
+	return datafiles
+
