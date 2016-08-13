@@ -122,7 +122,7 @@ class InstallerBuilder(object):
 
  def find_babel_datafiles(self):
   import babel
-  return ('localedata', glob.glob(os.path.join(babel.__path__[0], 'localedata', '*.*'))),
+  return ('locale-data', glob.glob(os.path.join(babel.__path__[0], 'locale-data', '*.*'))),
 
  def find_locale_data(self, locale_path):
   for dirpath, dirnames, filenames in os.walk(locale_path):
