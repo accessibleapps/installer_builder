@@ -21,7 +21,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.391
+__version__ = 0.392
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -33,7 +33,7 @@ class InstallerBuilder(object):
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, dll_excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -51,6 +51,10 @@ class InstallerBuilder(object):
    excludes = []
   excludes.extend(self.default_excludes)
   self.excludes = excludes
+  if dll_excludes is None:
+   dll_excludes = []
+  dll_excludes.extend(self.default_dll_excludes)
+  self.dll_excludes = dll_excludes
   self.compressed = compressed
   self.skip_archive = skip_archive
   self.bundle_level = bundle_level
@@ -253,7 +257,7 @@ class InstallerBuilder(object):
      'includes': self.includes,
      'excludes': self.excludes,
      'packages': self.extra_packages,
-     'dll_excludes': self.default_dll_excludes,
+     'dll_excludes': self.dll_excludes,
      'optimize': self.optimization_level,
      'skip_archive': self.skip_archive,
     },
