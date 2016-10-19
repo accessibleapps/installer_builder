@@ -11,9 +11,11 @@ import subprocess
 import time
 import os
 import sys
-if platform.system() == "Windows":
+is_windows = platform.system() == 'Windows'
+is_mac = platform.system() == 'Darwin'
+if is_windows:
  import installer_builder.innosetup
-if platform.system() == 'Darwin':
+if is_mac:
  import py2app.build_app
 
 if '_' not in __builtin__.__dict__:
@@ -241,7 +243,7 @@ class InstallerBuilder(object):
  def build_installer(self):
   if None in (self.name, self.main_module):
    raise RuntimeError("Insufficient information provided to build")
-  res = setuptools.setup(
+  setup_arguments = dict(
    name = self.name,
    author = self.author,
    author_email = self.author_email,
@@ -249,7 +251,6 @@ class InstallerBuilder(object):
    version = self.version,
    packages = setuptools.find_packages(),
    data_files = self.find_datafiles(),
-   app = [self.main_module],
    options = {
     'py2exe': {
      'compressed': self.compressed,
@@ -288,6 +289,9 @@ class InstallerBuilder(object):
    }],
    cmdclass = {self.build_command: self.get_command_class()},
   )
+  if is_mac:
+   setup_arguments['app'] = [self.main_module],
+  res = setuptools.setup(**setup_arguments)
 
 class AppInstallerBuilder(InstallerBuilder):
 
