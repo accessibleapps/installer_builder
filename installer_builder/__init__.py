@@ -23,7 +23,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.392
+__version__ = 0.393
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -101,8 +101,10 @@ class InstallerBuilder(object):
   print "Removing previous output directories"
   directories = self.build_dirs + [self.output_directory]
   for directory in directories:
+   if not os.path.exists(directory):
+    continue
    print "Deleting %s" % directory
-   shutil.rmtree(directory, ignore_errors=True)
+   shutil.rmtree(directory, ignore_errors=False)
    print "Deleted ", directory
 
  def find_datafiles(self):
