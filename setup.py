@@ -3,7 +3,7 @@ import os
 
 
 __name__ = "installer_builder"
-__version__ = 0.392
+__version__ = 0.393
 __doc__ = """Easily generate installers for multiple platforms"""
 
 setup(
