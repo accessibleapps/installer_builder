@@ -245,6 +245,7 @@ class InstallerBuilder(object):
  def build_installer(self):
   if None in (self.name, self.main_module):
    raise RuntimeError("Insufficient information provided to build")
+
   setup_arguments = dict(
    name = self.name,
    author = self.author,
@@ -286,13 +287,14 @@ class InstallerBuilder(object):
    windows = [{
     'script': self.main_module,
     'dest_base': self.name,
-    'other_resources': [innosetup.manifest(self.name)],
     'company_name': self.author,
    }],
    cmdclass = {self.build_command: self.get_command_class()},
   )
   if is_mac:
-   setup_arguments['app'] = [self.main_module],
+   setup_arguments['app'] = [self.main_module]
+  if is_windows:
+   setup_arguments['other_resources'] = [innosetup.manifest(self.name)],
   res = setuptools.setup(**setup_arguments)
 
 class AppInstallerBuilder(InstallerBuilder):
