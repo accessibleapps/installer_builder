@@ -23,7 +23,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.393
+__version__ = 0.394
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -294,7 +294,7 @@ class InstallerBuilder(object):
   if is_mac:
    setup_arguments['app'] = [self.main_module]
   if is_windows:
-   setup_arguments['other_resources'] = [innosetup.manifest(self.name)],
+   setup_arguments['windows'][0]['other_resources'] = innosetup.manifest(self.name),
   res = setuptools.setup(**setup_arguments)
 
 class AppInstallerBuilder(InstallerBuilder):
