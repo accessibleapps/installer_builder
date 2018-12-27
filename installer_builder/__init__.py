@@ -23,7 +23,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.394
+__version__ = 0.395
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -52,6 +52,7 @@ class InstallerBuilder(object):
   if excludes is None:
    excludes = []
   excludes.extend(self.default_excludes)
+  excludes.extend(self.get_version_specific_excludes())
   self.excludes = excludes
   if dll_excludes is None:
    dll_excludes = []
@@ -83,6 +84,13 @@ class InstallerBuilder(object):
    localized_packages = []
   self.localized_packages = localized_packages
   self.has_translations = has_translations
+
+ def get_version_specific_excludes(self):
+  result = []
+  version = float('%d.%d' % (sys.version_info.major, sys.version_info.minor))
+  if version < 3.5:
+   result.append('jinja2.asyncsupport')
+  return result
 
  def build(self):
   self.build_start_time = time.time()
