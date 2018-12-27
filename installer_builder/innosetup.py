@@ -486,22 +486,15 @@ class InnoScript(object):
 
  @property
  def innoexepath(self):
-  if self.builder.inno_setup_exe:
-   return self.builder.inno_setup_exe
 
   result = getregvalue(
    'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
    '\\Uninstall\\Inno Setup 5_is1\\InstallLocation')
-  if result:
-   return os.path.join(result, 'ISCC.exe')
-
-  result = getregvalue(
-   'HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows'
-   '\\CurrentVersion\\Uninstall\\Inno Setup 5_is1\\InstallLocation')
-  if result:
-   return os.path.join(result, 'ISCC.exe')
-
-  return ''
+  if not result:
+   result = getregvalue(
+    'HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows'
+    '\\CurrentVersion\\Uninstall\\Inno Setup 5_is1\\InstallLocation')
+  return self.builder.inno_setup_exe or os.path.join(result or '', 'ISCC.exe')
 
  @property
  def msvcfiles(self):
@@ -950,11 +943,13 @@ class innosetup(py2exe):
   self.modules = modules
 
  def run(self):
+  script = InnoScript(self)
+  if not os.path.exists(script.innoexepath):
+   raise EnvironmentError("Please install InnoSetup before attempting to build an installer.")
   py2exe.run(self)
   compath = os.path.join('dist', 'win32com', 'gen_py')
   if os.path.isdir(compath):
    shutil.rmtree(compath)
-  script = InnoScript(self)
   print "*** creating the inno setup script ***"
   script.create()
   print "*** compiling the inno setup script ***"
