@@ -878,8 +878,10 @@ class InnoScript(object):
     fp.write('\n')
 
  def compile_script(self):
-  subprocess.call([self.innoexepath, self.issfile])
-
+  try:
+   subprocess.check_call([self.innoexepath, self.issfile])
+  except WindowsError:
+   raise EnvironmentError("Please install InnoSetup to build an executable installer. ")
   outputdir = self.iss_metadata.get('OutputDir',
    os.path.join(os.path.dirname(self.issfile), 'Output'))
   setupfile = os.path.join(outputdir,
