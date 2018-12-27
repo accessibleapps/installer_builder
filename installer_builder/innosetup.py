@@ -532,13 +532,16 @@ class InnoScript(object):
           'assemblyIdentity'):
     if e.attrib['name'] == assemblename: break
    else:
-    raise EnvironmentError('no msvcr manifets file found')
+    raise EnvironmentError('no msvcr manifest file found')
 
    dirname = os.path.join(os.path.dirname(os.path.dirname(vcrname)),
            'Manifests')
-   src = os.path.join(dirname, findfiles(os.listdir(dirname),
-    assemblename, e.attrib['version'],
-    e.attrib['processorArchitecture'], '.manifest')[0])
+   try:
+    src = os.path.join(dirname, findfiles(os.listdir(dirname),
+     assemblename, e.attrib['version'],
+     e.attrib['processorArchitecture'], '.manifest')[0])
+   except IndexError:
+    raise EnvironmentError('Could not find a copy of the Visual Studio Redistributable version 9.0.21022. Obtain it from https://www.microsoft.com/en-ca/download/details.aspx?id=29')
    data = open(src, 'rb').read()
    open(manifestfile, 'wb').write(data)
 
