@@ -1,3 +1,5 @@
+#* Encoding: UTF-8
+
 import setuptools
 import __builtin__
 import collections
@@ -23,7 +25,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.395
+__version__ = 0.396
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -296,6 +298,7 @@ class InstallerBuilder(object):
     'script': self.main_module,
     'dest_base': self.name,
     'company_name': self.author,
+    'copyright': self.get_copyright(),
    }],
    cmdclass = {self.build_command: self.get_command_class()},
   )
@@ -304,6 +307,9 @@ class InstallerBuilder(object):
   if is_windows:
    setup_arguments['windows'][0]['other_resources'] = innosetup.manifest(self.name),
   res = setuptools.setup(**setup_arguments)
+
+ def get_copyright(self):
+  return "Copyright © %d %s" % (datetime.date.today().year, self.author)
 
 class AppInstallerBuilder(InstallerBuilder):
 
