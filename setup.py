@@ -6,7 +6,7 @@ if int(sys.version[0]) < 3:
  install_requires = ['py2exe_py2']
 
 __name__ = "installer_builder"
-__version__ = 0.396
+__version__ = 0.40
 __doc__ = """Easily generate installers for multiple platforms"""
 
 setup(
