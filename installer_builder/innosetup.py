@@ -165,6 +165,7 @@ History
 
 
 """
+from __future__ import absolute_import
 import sys, imp, os, platform, subprocess, codecs, ctypes, uuid, _winreg, \
     distutils.msvccompiler, shutil
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -173,7 +174,7 @@ import win32api # for read pe32 resource
 from py2exe.build_exe import *
 from py2exe import build_exe, mf as modulefinder
 from platform_utils import paths
-
+from . import signtool
 
 
 DEFAULT_ISS = ""
@@ -875,10 +876,7 @@ class InnoScript(object):
    subprocess.check_call([self.innoexepath, self.issfile])
   except WindowsError:
    raise EnvironmentError("Please install InnoSetup to build an executable installer. ")
-  outputdir = self.iss_metadata.get('OutputDir',
-   os.path.join(os.path.dirname(self.issfile), 'Output'))
-  setupfile = os.path.join(outputdir,
-   self.iss_metadata.get('OutputBaseFilename', 'setup') + '.exe')
+  setupfile = self.setup_file_path
 
   # zip the setup file
   if self.builder.zip:
@@ -897,6 +895,14 @@ class InnoScript(object):
    self.builder.distribution.dist_files.append(
     ('innosetup', '', setupfile))
 
+ @property
+ def setup_file_path(self):
+  return os.path.join(self.output_dir, self.iss_metadata.get('OutputBaseFilename', 'setup') + '.exe')
+
+ @property
+ def output_dir(self):
+  return self.iss_metadata.get('OutputDir',
+   os.path.join(os.path.dirname(self.issfile), 'Output'))
 
 class innosetup(py2exe):
 
@@ -908,6 +914,10 @@ class innosetup(py2exe):
    'a path to InnoSetup script file or an InnoSetup script string'),
   ('extra-inno-script=', None,
    'an InnoSetup script string'),
+  ('certificate-file=', None,
+   'Path to signing certificate'),
+  ('certificate-password=', None,
+   'Password for signing certificate'),
   ('bundle-vcr=', None,
    'bundle msvc*XX.dll and mfc*.dll and their manifest files'),
    ('zip=', None, 'zip setup file'),
@@ -926,6 +936,8 @@ class innosetup(py2exe):
   self.inno_setup_exe = ''
   self.inno_script = ''
   self.extra_inno_script = None
+  self.certificate_file = None
+  self.certificate_password = None
   self.bundle_vcr = True
   self.zip = False
   self.register_startup = False
@@ -947,6 +959,8 @@ class innosetup(py2exe):
   if not os.path.exists(script.innoexepath):
    raise EnvironmentError("Please install InnoSetup before attempting to build an installer.")
   py2exe.run(self)
+  if self.certificate_file:
+   self.sign_executables()
   compath = os.path.join('dist', 'win32com', 'gen_py')
   if os.path.isdir(compath):
    shutil.rmtree(compath)
@@ -954,7 +968,18 @@ class innosetup(py2exe):
   script.create()
   print "*** compiling the inno setup script ***"
   script.compile_script()
+  if self.certificate_file:
+   self.sign_executable(script.setup_file_path)
 
+ def sign_executables(self):
+  for executable in self.distribution.windows:
+   exepath = os.path.join('dist', '{base}.exe'.format(base=executable.get_dest_base()))
+   self.sign_executable(exepath)
+
+ def sign_executable(self, exepath):
+  url = self.distribution.get_url()
+
+  signtool.sign(exepath, url=url, certificate_file=self.certificate_file, certificate_password=self.certificate_password)
 
 #
 # register command
