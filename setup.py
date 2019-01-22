@@ -11,6 +11,7 @@ setup(
  version = __version__,
  description = __doc__,
  packages = find_packages(),
+ install_requires = ['py2exe_py2', ],
  classifiers = [
   'Development Status :: 3 - Alpha',
   'Intended Audience :: Developers',
