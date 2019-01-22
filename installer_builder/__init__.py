@@ -5,6 +5,7 @@ import __builtin__
 import collections
 import datetime
 import fnmatch
+import getpass
 import glob
 import importlib
 import platform
@@ -37,7 +38,7 @@ class InstallerBuilder(object):
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, dll_excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, dll_excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False, certificate_file=None, certificate_password=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -86,6 +87,8 @@ class InstallerBuilder(object):
    localized_packages = []
   self.localized_packages = localized_packages
   self.has_translations = has_translations
+  self.certificate_file = certificate_file
+  self.certificate_password = certificate_password
 
  def get_version_specific_excludes(self):
   result = []
@@ -255,7 +258,8 @@ class InstallerBuilder(object):
  def build_installer(self):
   if None in (self.name, self.main_module):
    raise RuntimeError("Insufficient information provided to build")
-
+  if is_windows and self.certificate_file is not None and self.certificate_password is None:
+   self.certificate_password = os.environ.get('CERTIFICATE_PASS', getpass.getpass("Certificate password:"))
   setup_arguments = dict(
    name = self.name,
    author = self.author,
@@ -278,6 +282,8 @@ class InstallerBuilder(object):
     'innosetup': {
      'extra_inno_script': self.extra_inno_script,
      'register_startup': self.register_startup,
+     'certificate_file': self.certificate_file,
+     'certificate_password': self.certificate_password,
     },
     'py2app': {
      'compressed': self.compressed,
