@@ -918,6 +918,8 @@ class innosetup(py2exe):
    'Path to signing certificate'),
   ('certificate-password=', None,
    'Password for signing certificate'),
+  ('extra-sign=', None,
+   'Extra Files to be signed'),
   ('bundle-vcr=', None,
    'bundle msvc*XX.dll and mfc*.dll and their manifest files'),
    ('zip=', None, 'zip setup file'),
@@ -938,6 +940,7 @@ class innosetup(py2exe):
   self.extra_inno_script = None
   self.certificate_file = None
   self.certificate_password = None
+  self.extra_sign = []
   self.bundle_vcr = True
   self.zip = False
   self.register_startup = False
@@ -975,10 +978,13 @@ class innosetup(py2exe):
   for executable in self.distribution.windows:
    exepath = os.path.join('dist', '{base}.exe'.format(base=executable.get_dest_base()))
    self.sign_executable(exepath)
+  if not self.extra_sign:
+   return
+  for extra in self.extra_sign:
+   self.sign_executable(os.path.join('dist', extra))
 
  def sign_executable(self, exepath):
   url = self.distribution.get_url()
-
   signtool.sign(exepath, url=url, certificate_file=self.certificate_file, certificate_password=self.certificate_password)
 
 #
