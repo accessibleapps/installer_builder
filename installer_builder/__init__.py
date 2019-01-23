@@ -38,7 +38,7 @@ class InstallerBuilder(object):
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, dll_excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False, certificate_file=None, certificate_password=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, dll_excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False, certificate_file=None, certificate_password=None, extra_files_to_sign=None):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -89,6 +89,9 @@ class InstallerBuilder(object):
   self.has_translations = has_translations
   self.certificate_file = certificate_file
   self.certificate_password = certificate_password
+  if extra_files_to_sign is None:
+   extra_files_to_sign = []
+  self.extra_files_to_sign = extra_files_to_sign
 
  def get_version_specific_excludes(self):
   result = []
@@ -259,7 +262,7 @@ class InstallerBuilder(object):
   if None in (self.name, self.main_module):
    raise RuntimeError("Insufficient information provided to build")
   if is_windows and self.certificate_file is not None and self.certificate_password is None:
-   self.certificate_password = os.environ.get('CERTIFICATE_PASS', getpass.getpass("Certificate password:"))
+   self.certificate_password = os.environ.get('CERTIFICATE_PASS') or getpass.getpass("Certificate password:")
   setup_arguments = dict(
    name = self.name,
    author = self.author,
@@ -284,6 +287,7 @@ class InstallerBuilder(object):
      'register_startup': self.register_startup,
      'certificate_file': self.certificate_file,
      'certificate_password': self.certificate_password,
+     'extra_sign': self.extra_files_to_sign,
     },
     'py2app': {
      'compressed': self.compressed,
@@ -326,6 +330,7 @@ class AppInstallerBuilder(InstallerBuilder):
   new_kwargs['version'] = getattr(application, 'version', None)
   new_kwargs['url'] = getattr(application, 'website', None)
   new_kwargs['author'] = getattr(application, 'author', None)
+  files_to_sign = kwargs.get('extra_files_to_sign', [])
   datafiles = kwargs.get('datafiles', [])
   datafile_packages = kwargs.get('datafile_packages', [])
   includes = kwargs.get('includes', [])
@@ -351,6 +356,7 @@ class AppInstallerBuilder(InstallerBuilder):
   if hasattr(application, 'update_endpoint'):
    datafile_packages.append('autoupdate')
    new_kwargs['create_update'] = True
+   files_to_sign.append('bootstrap.exe')
   kwargs['datafile_packages'] = datafile_packages
   includes = kwargs.get('includes', [])
   if hasattr(application, 'activation_module'):
@@ -366,6 +372,7 @@ class AppInstallerBuilder(InstallerBuilder):
     includes.append('.'.join(application.main_window_class.split('.')[:-1]))
   kwargs['localized_packages'] = localized_packages
   kwargs['includes'] = includes
+  kwargs['extra_files_to_sign'] = files_to_sign
   new_kwargs.update(kwargs)
   if hasattr(application, 'register_startup'):
    new_kwargs['register_startup'] = application.register_startup
