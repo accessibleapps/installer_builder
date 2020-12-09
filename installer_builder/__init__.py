@@ -26,7 +26,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.40
+__version__ = 0.41
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -38,7 +38,7 @@ class InstallerBuilder(object):
  build_command = 'release'
 
 
- def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, dll_excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False, certificate_file=None, certificate_password=None, extra_files_to_sign=None):
+ def __init__(self, main_module=None, name=None, version=None, url=None, author=None, author_email=None, datafiles=None, includes=None, excludes=None, dll_excludes=None, compressed=False, skip_archive=False, bundle_level=3, optimization_level=1, extra_packages=None, datafile_packages=None, output_directory='release', create_update=False, postbuild_commands=None, osx_frameworks=None, extra_inno_script=None, register_startup=False, localized_packages=None, has_translations=False, certificate_file=None, certificate_password=None, extra_files_to_sign=None, app_type='windows'):
   super(InstallerBuilder, self).__init__()
   self.main_module = main_module
   self.name = name
@@ -92,6 +92,9 @@ class InstallerBuilder(object):
   if extra_files_to_sign is None:
    extra_files_to_sign = []
   self.extra_files_to_sign = extra_files_to_sign
+  if app_type not in ('windows', 'console'):
+   raise ValueError("Invalid app type")
+  self.app_type = app_type
 
  def get_version_specific_excludes(self):
   result = []
@@ -263,15 +266,15 @@ class InstallerBuilder(object):
    raise RuntimeError("Insufficient information provided to build")
   if is_windows and self.certificate_file is not None and self.certificate_password is None:
    self.certificate_password = os.environ.get('CERTIFICATE_PASS') or getpass.getpass("Certificate password:")
-  setup_arguments = dict(
-   name = self.name,
-   author = self.author,
-   author_email = self.author_email,
-   url = self.url,
-   version = self.version,
-   packages = setuptools.find_packages(),
-   data_files = self.find_datafiles(),
-   options = {
+  setup_arguments = {
+   'name': self.name,
+   'author': self.author,
+   'author_email': self.author_email,
+   'url': self.url,
+   'version': self.version,
+   'packages': setuptools.find_packages(),
+   'data_files': self.find_datafiles(),
+   'options': {
     'py2exe': {
      'compressed': self.compressed,
      'bundle_files': self.bundle_level,
@@ -304,18 +307,18 @@ class InstallerBuilder(object):
      },
     },
    },
-   windows = [{
+   self.app_type: [{
     'script': self.main_module,
     'dest_base': self.name,
     'company_name': self.author,
     'copyright': self.get_copyright(),
    }],
-   cmdclass = {self.build_command: self.get_command_class()},
-  )
+   'cmdclass':  {self.build_command: self.get_command_class()},
+  }
   if is_mac:
    setup_arguments['app'] = [self.main_module]
   if is_windows:
-   setup_arguments['windows'][0]['other_resources'] = innosetup.manifest(self.name),
+   setup_arguments[self.app_type][0]['other_resources'] = innosetup.manifest(self.name),
   res = setuptools.setup(**setup_arguments)
 
  def get_copyright(self):
