@@ -26,7 +26,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.41
+__version__ = 0.42
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -129,8 +129,11 @@ class InstallerBuilder(object):
  def find_datafiles(self):
   datafiles = []
   for package in self.datafile_packages:
-   pkg = importlib.import_module(package)
-   datafiles.extend(pkg.find_datafiles())
+   pkg_datafile_function = DATAFILE_REGISTRY.get(package)
+   if pkg_datafile_function is None:
+    pkg = importlib.import_module(package)
+    pkg_datafile_function = pkg.find_datafiles
+   datafiles.extend(pkg_datafile_function())
   if self.has_translations:
    datafiles.extend(self.find_application_language_data())
    datafiles.extend(self.find_babel_datafiles())
@@ -428,3 +431,26 @@ def get_datafiles(directory="share", match="*", target_path=None):
 			datafiles.append((target_path, [this_filename]))
 	return datafiles
 
+
+def pytz_datafiles():
+  import pytz
+  path = os.path.join(os.path.split(pytz.__file__)[0], 'zoneinfo')
+  files = get_datafiles(path, '*')
+  index = path.index('zoneinfo') 
+  files = [(i[0][index:], i[1]) for i in files]
+  return files
+
+def enchant_datafiles():
+  import enchant
+  enchant_path = os.path.split(enchant.__file__)[0]
+  files = get_datafiles(enchant_path, '*.dll')
+  files.extend(get_datafiles(enchant_path, '*.dic', target_path=''))
+  files.extend(get_datafiles(enchant_path, '*.aff', target_path=''))
+  index = enchant_path.index('enchant') + 8
+  files = [(i[0][index:], i[1]) for i in files]
+  return files
+
+DATAFILE_REGISTRY = {
+  'enchant': enchant_datafiles,
+  'pytz': pytz_datafiles,
+}
