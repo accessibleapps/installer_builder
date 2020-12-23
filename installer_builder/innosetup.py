@@ -166,8 +166,14 @@ History
 
 """
 from __future__ import absolute_import
-import sys, imp, os, platform, subprocess, codecs, ctypes, uuid, _winreg, \
-    distutils.msvccompiler, shutil
+from __future__ import print_function
+import sys, imp, os, platform, subprocess, codecs, ctypes, uuid
+try:
+ import _winreg
+except ImportError:
+ import winreg as _winreg
+
+import distutils.msvccompiler, shutil
 from zipfile import ZipFile, ZIP_DEFLATED
 from xml.etree import ElementTree
 import win32api # for read pe32 resource
@@ -967,9 +973,9 @@ class innosetup(py2exe):
   compath = os.path.join('dist', 'win32com', 'gen_py')
   if os.path.isdir(compath):
    shutil.rmtree(compath)
-  print "*** creating the inno setup script ***"
+  print("*** creating the inno setup script ***")
   script.create()
-  print "*** compiling the inno setup script ***"
+  print("*** compiling the inno setup script ***")
   script.compile_script()
   if self.certificate_file:
    self.sign_executable(script.setup_file_path)
@@ -1013,7 +1019,7 @@ class PackagePathMap(object):
     __import__(modname)
    return getattr(sys.modules[name], '__path__', [])[1:]
   except Exception as e:
-   print e
+   print(e)
    pass
   return default
 

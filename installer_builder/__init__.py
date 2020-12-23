@@ -1,7 +1,11 @@
 #* Encoding: UTF-8
 
+from __future__ import print_function
 import setuptools
-import __builtin__
+try:
+ import __builtin__
+except ImportError:
+ import builtins as __builtin__
 import collections
 import datetime
 import fnmatch
@@ -26,7 +30,7 @@ if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.42
+__version__ = 0.43
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -113,18 +117,18 @@ class InstallerBuilder(object):
   self.report_build_statistics()
 
  def prebuild_message(self):
-  print "Installer builder version %s" % __version__
-  print "Building %s installer for %s %s" % (platform.system(), self.name, self.version)
+  print("Installer builder version %s" % __version__)
+  print("Building %s installer for %s %s" % (platform.system(), self.name, self.version))
 
  def remove_previous_build(self):
-  print "Removing previous output directories"
+  print("Removing previous output directories")
   directories = self.build_dirs + [self.output_directory]
   for directory in directories:
    if not os.path.exists(directory):
     continue
-   print "Deleting %s" % directory
+   print("Deleting %s" % directory)
    shutil.rmtree(directory, ignore_errors=False)
-   print "Deleted ", directory
+   print("Deleted ", directory)
 
  def find_datafiles(self):
   datafiles = []
@@ -143,7 +147,7 @@ class InstallerBuilder(object):
    locale_path = os.path.join(path, self.locale_dir)
    files = self.find_locale_data(locale_path)
    datafiles.extend(list(files))
-   print "Added locale data for %s" % package
+   print("Added locale data for %s" % package)
   return self.datafiles + datafiles
 
  def find_application_language_data(self):
@@ -167,7 +171,7 @@ class InstallerBuilder(object):
 
 
  def finalize_build(self):
-  print "Finalizing build..."
+  print("Finalizing build...")
   if platform.system() == 'Darwin':
    self.remove_embedded_interpreter()
    self.shrink_mac_binaries()
@@ -179,7 +183,7 @@ class InstallerBuilder(object):
 
 
  def remove_embedded_interpreter(self):
-  print "Replacing the embedded interpreter with a dumby file"
+  print("Replacing the embedded interpreter with a dumby file")
   interpreter_path = os.path.join(self.get_app_path(), 'python')
   os.remove(interpreter_path)
   self.execute_command('touch %s' % interpreter_path)
@@ -191,17 +195,17 @@ class InstallerBuilder(object):
   return self.dist_dir
 
  def create_dmg(self):
-  print "Creating .dmg disk image"
+  print("Creating .dmg disk image")
   self.execute_command(   'hdiutil create -srcfolder dist/%s.app -size 150m dist/%s' % (self.name, self.installer_filename()))
 
  def move_output(self):
   os.mkdir(self.output_directory)
   destination = os.path.join(self.output_directory, self.installer_filename())
   os.rename(self.find_created_installer(), destination)
-  print "Moved generated installer to %s" % destination
+  print("Moved generated installer to %s" % destination)
 
  def create_update_archive(self):
-  print "Generating update archive"
+  print("Generating update archive")
   name = '%s-%s-%s' % (self.name, self.version, platform.system())
   root_dir = self.dist_dir
   if platform.system() == 'Darwin':
@@ -210,7 +214,7 @@ class InstallerBuilder(object):
   filename = os.path.split(filename)[-1]
   destination = os.path.join(self.output_directory, filename)
   os.rename(filename, destination)
-  print "Generated update archive filename: %s" % destination
+  print("Generated update archive filename: %s" % destination)
 
  def find_created_installer(self):
   res = os.path.join('dist', self.installer_filename())
@@ -235,7 +239,7 @@ class InstallerBuilder(object):
  def perform_postbuild_commands(self):
   if not self.postbuild_commands[platform.system().lower()]:
    return
-  print "Performing postbuild commands for platform %s" % platform.system()
+  print("Performing postbuild commands for platform %s" % platform.system())
   for command in self.postbuild_commands[platform.system().lower()]:
    self.execute_command(command)
 
@@ -243,8 +247,8 @@ class InstallerBuilder(object):
   subprocess.check_call([command], shell=True)
 
  def report_build_statistics(self):
-  print "Generated installer filename: %s" % self.find_created_installer()
-  print "Generated installer filesize: %s" % format_filesize(os.stat(self.find_created_installer()).st_size)
+  print("Generated installer filename: %s" % self.find_created_installer())
+  print("Generated installer filesize: %s" % format_filesize(os.stat(self.find_created_installer()).st_size))
   self.report_build_time()
 
  def shrink_mac_binaries(self):
@@ -257,12 +261,12 @@ class InstallerBuilder(object):
 
  def lipo_file(self, filename):
   self.execute_command('lipo -thin i386 %s -output %s' % (filename, filename))
-  print "Lipoed file %s" % filename
+  print("Lipoed file %s" % filename)
 
  def report_build_time(self):
   build_time = time.time() - self.build_start_time
   td = datetime.timedelta(seconds=build_time)
-  print "Build completed in ", format(td)
+  print("Build completed in ", format(td))
 
  def build_installer(self):
   if None in (self.name, self.main_module):
@@ -325,7 +329,7 @@ class InstallerBuilder(object):
   res = setuptools.setup(**setup_arguments)
 
  def get_copyright(self):
-  return "Copyright © %d %s" % (datetime.date.today().year, self.author)
+  return "Copyright Â©%d %s" % (datetime.date.today().year, self.author)
 
 class AppInstallerBuilder(InstallerBuilder):
 
