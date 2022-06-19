@@ -20,17 +20,13 @@ import os
 import sys
 is_windows = platform.system() == 'Windows'
 is_mac = platform.system() == 'Darwin'
-if is_windows:
- import installer_builder.innosetup
-if is_mac:
- import py2app.build_app
 
 if '_' not in __builtin__.__dict__:
  __builtin__.__dict__['_'] = lambda x: x
  __builtin__.__dict__['__'] = lambda x: x
  __builtin__.__dict__['lngettext'] = lambda *a: [i for i in a]
 
-__version__ = 0.43
+__version__ = 0.5
 
 class InstallerBuilder(object):
  build_dirs = ['build', 'dist']
@@ -407,8 +403,11 @@ def sqlite_sqlalchemy_excludes():
 def app_framework_excludes():
  return ['watchdog', 'yappi', 'pytest', 'pyreadline', 'nose', ]
 
-def stdlib_excludes():
- return ['doctest', 'email.test', 'ftplib', 'tarfile', 'bdb', 'pdb', ]
+def stdlib_excludes(pdb=True):
+ res = ['doctest', 'email.test', 'ftplib', 'tarfile', ]
+ if pdb:
+  res += ['bdb', 'pdb', ]
+ return res
 
 def win32_excludes():
  return ['win32pipe', 'win32wnet', 'win32evtlog', ]

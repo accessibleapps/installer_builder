@@ -1,10 +1,12 @@
 from setuptools import setup, find_packages
 import os
 import sys
-if int(sys.version[0]) < 3:
- install_requires = ['py2exe_py2', 'pywin32']
-else:
- install_requires = ['py2exe', 'pywin32']
+install_requires = []
+if sys.platform == 'win32':
+ if int(sys.version[0]) < 3:
+  install_requires = ['py2exe_py2', 'pywin32']
+ else:
+  install_requires = ['py2exe', 'pywin32']
 
 __name__ = "installer_builder"
 __version__ = 0.40
