@@ -177,8 +177,13 @@ import distutils.msvccompiler, shutil
 from zipfile import ZipFile, ZIP_DEFLATED
 from xml.etree import ElementTree
 import win32api # for read pe32 resource
+from io import FileIO
 from py2exe.build_exe import *
-from py2exe import build_exe, mf as modulefinder
+try:
+ from py2exe import build_exe, mf as modulefinder
+except ImportError:
+ from py2exe import build_exe, mf34 as modulefinder
+
 from platform_utils import paths
 from . import signtool
 
@@ -388,7 +393,7 @@ def getregvalue(path, default=None):
   return default
 
 
-class IssFile(file):
+class IssFile(FileIO):
  """file object with useful method `issline`"""
  noescape = ['Flags', ]
 
