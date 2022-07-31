@@ -374,7 +374,7 @@ class AppInstallerBuilder(InstallerBuilder):
   if hasattr(application, 'main_window_class'):
    localized_packages.append('wx')
    localized_packages.append('app_elements')
-   if isinstance(application.main_window_class, basestring):
+   if isinstance(application.main_window_class, str):
     includes.append('.'.join(application.main_window_class.split('.')[:-1]))
   kwargs['localized_packages'] = localized_packages
   kwargs['includes'] = includes
