@@ -100,6 +100,44 @@ builder = AppInstallerBuilder(
 builder.build()
 ```
 
+### Integration with app_framework
+
+The `AppInstallerBuilder` is designed to work seamlessly with applications built using the app_framework. It automatically handles:
+
+- Configuration files and specs
+- Internationalization and localization
+- Sound output and UI sounds
+- Activation and product key management
+- Autoupdater integration
+- Debug shell configuration
+
+For app_framework applications, simply pass your application object:
+
+```python
+import app_framework
+from installer_builder import AppInstallerBuilder
+
+# Your app_framework application
+import application
+
+builder = AppInstallerBuilder(
+    application=application,
+    certificate_file="path/to/certificate.pfx",
+    has_translations=True,
+)
+
+builder.build()
+```
+
+The builder will automatically detect app_framework-specific attributes like:
+- `config_file` and `config_spec`
+- `output` for accessibility
+- `sound` and `UI_sounds`
+- `update_endpoint`
+- `activation_module`
+- `main_window_class`
+- `debug_port` and `debug_host`
+
 ## Code Signing
 
 To sign your Windows executables and installer:
