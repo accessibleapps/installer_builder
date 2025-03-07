@@ -165,28 +165,42 @@ History
 
 
 """
-from __future__ import absolute_import
-from __future__ import print_function
-import sys, imp, os, platform, subprocess, codecs, ctypes, uuid
+from __future__ import absolute_import, print_function
+
+import ctypes
+import imp
+import os
+import platform
+import re
+import subprocess
+import sys
+import uuid
+
 try:
  import _winreg
 except ImportError:
  import winreg as _winreg
 
-import distutils.msvccompiler, shutil
-from zipfile import ZipFile, ZIP_DEFLATED
-from xml.etree import ElementTree
-import win32api # for read pe32 resource
+import distutils.msvccompiler
+import shutil
 from io import FileIO
-from py2exe.build_exe import *
-try:
- from py2exe import build_exe, mf as modulefinder
-except ImportError:
- from py2exe import build_exe, mf34 as modulefinder
+from xml.etree import ElementTree
+from zipfile import ZIP_DEFLATED, ZipFile
 
-from platform_utils import paths
+import win32api  # for read pe32 resource
+from py2exe.distutils_buildexe import *
+
+try:
+ from py2exe import build_exe
+ from py2exe import mf as modulefinder
+except ImportError:
+ from py2exe import build_exe
+ from py2exe import mf34 as modulefinder
+
+
 from . import signtool
 
+RT_MANIFEST=24
 
 DEFAULT_ISS = ""
 DEFAULT_CODES = """
@@ -463,7 +477,7 @@ class InnoScript(object):
   """get relative path"""
   if not dirname:
    dirname = self.builder.dist_dir
-  if not dirname[-1] in "\\/":
+  if dirname[-1] not in "\\/":
    dirname += "\\"
   if filename.startswith(dirname):
    filename = filename[len(dirname):]
@@ -501,11 +515,11 @@ class InnoScript(object):
 
   result = getregvalue(
    'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
-   '\\Uninstall\\Inno Setup 5_is1\\InstallLocation')
+   '\\Uninstall\\Inno Setup 6_is1\\InstallLocation')
   if not result:
    result = getregvalue(
     'HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows'
-    '\\CurrentVersion\\Uninstall\\Inno Setup 5_is1\\InstallLocation')
+    '\\CurrentVersion\\Uninstall\\Inno Setup 6_is1\\InstallLocation')
   return self.builder.inno_setup_exe or os.path.join(result or '', 'ISCC.exe')
 
  @property
@@ -1002,6 +1016,7 @@ class innosetup(py2exe):
 # register command
 #
 import distutils.command
+
 distutils.command.__all__.append('innosetup')
 sys.modules['distutils.command.innosetup'] = sys.modules[__name__]
 
@@ -1010,6 +1025,8 @@ sys.modules['distutils.command.innosetup'] = sys.modules[__name__]
 # fix a problem py2exe.mf misses some modules
 #
 from modulefinder import packagePathMap
+
+
 class PackagePathMap(object):
  def get(self, name, default=None):
   try:
@@ -1032,18 +1049,74 @@ class PackagePathMap(object):
   packagePathMap[name] = value
 modulefinder.packagePathMap = PackagePathMap()
 
+EXCLUDED_DLLS = (
+    "advapi32.dll",
+    "comctl32.dll",
+    "comdlg32.dll",
+    "crtdll.dll",
+    "gdi32.dll",
+    "glu32.dll",
+    "opengl32.dll",
+    "imm32.dll",
+    "kernel32.dll",
+    "mfc42.dll",
+    "msvcirt.dll",
+    "msvcrt.dll",
+    "msvcrtd.dll",
+    "ntdll.dll",
+    "odbc32.dll",
+    "ole32.dll",
+    "oleaut32.dll",
+    "rpcrt4.dll",
+    "shell32.dll",
+    "shlwapi.dll",
+    "user32.dll",
+    "version.dll",
+    "winmm.dll",
+    "winspool.drv",
+    "ws2_32.dll",
+    "ws2help.dll",
+    "wsock32.dll",
+    "netapi32.dll",
+
+    "gdiplus.dll",
+    )
+
+
+# XXX Perhaps it would be better to assume dlls from the systemdir are system dlls,
+# and make some exceptions for known dlls, like msvcr71, pythonXY.dll, and so on?
+def _isSystemDLL(pathname):
+    if os.path.basename(pathname).lower() in ("msvcr71.dll", "msvcr71d.dll"):
+        return 0
+    if os.path.basename(pathname).lower() in EXCLUDED_DLLS:
+        return 1
+    # How can we determine whether a dll is a 'SYSTEM DLL'?
+    # Is it sufficient to use the Image Load Address?
+    import struct
+    file = open(pathname, "rb")
+    if file.read(2) != "MZ":
+        raise Exception("Seems not to be an exe-file")
+    file.seek(0x3C)
+    pe_ofs = struct.unpack("i", file.read(4))[0]
+    file.seek(pe_ofs)
+    if file.read(4) != "PE\000\000":
+        raise Exception("Seems not to be an exe-file", pathname)
+    file.read(20 + 28) # COFF File Header, offset of ImageBase in Optional Header
+    imagebase = struct.unpack("I", file.read(4))[0]
+    return not (imagebase < 0x70000000)
+
 
 #
 # fix a problem that `py2exe` includes MinWin's ApiSet Stub DLLs on Windows 7.
 #
 # http://www.avertlabs.com/research/blog/index.php/2010/01/05/windows-7-kernel-api-refactoring/
 if sys.getwindowsversion()[:2] >= (6, 1):
- build_exe._isSystemDLL = build_exe.isSystemDLL
+ build_exe._isSystemDLL = _isSystemDLL
 
  def isSystemDLL(pathname):
   if 'msvc' in pathname.lower():
    return False
-  if build_exe._isSystemDLL(pathname):
+  if _isSystemDLL(pathname):
    return True
   try:
    language = win32api.GetFileVersionInfo(pathname,
@@ -1056,6 +1129,8 @@ if sys.getwindowsversion()[:2] >= (6, 1):
    pass
   return False
  build_exe.isSystemDLL = isSystemDLL
+
+
 
 if __name__ == '__main__':
  sys.modules['innosetup'] = sys.modules[__name__]
