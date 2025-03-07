@@ -386,7 +386,10 @@ class AppInstallerBuilder(InstallerBuilder):
   if hasattr(application, 'register_startup'):
    new_kwargs['register_startup'] = application.register_startup
   if hasattr(application, 'debug_port') or hasattr(application, 'debug_host'):
-   includes.append('SocketServer') #not picked up on Mac
+    if (sys.version_info.major < 3):
+      includes.append('SocketServer') #not picked up on Mac
+    else:
+      includes.append('socketserver')
   new_kwargs['includes'] = includes
   super(AppInstallerBuilder, self).__init__(**new_kwargs)
 
