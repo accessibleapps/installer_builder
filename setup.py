@@ -8,7 +8,7 @@ if sys.platform == 'win32':
   install_requires = ['py2exe', 'pywin32']
 
 __name__ = "installer_builder"
-__version__ = 0.40
+__version__ = "1.5.0"
 __doc__ = """Easily generate installers for multiple platforms"""
 
 setup(
@@ -18,7 +18,7 @@ setup(
  packages = find_packages(),
  install_requires = install_requires,
  classifiers = [
-  'Development Status :: 3 - Alpha',
+  'Development Status :: 4 - Beta',
   'Intended Audience :: Developers',
   'Programming Language :: Python',
   'Topic :: Software Development :: Libraries',
