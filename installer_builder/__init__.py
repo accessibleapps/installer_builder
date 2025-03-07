@@ -228,8 +228,10 @@ class InstallerBuilder(object):
 
  def get_command_class(self):
   if platform.system() == 'Windows':
-   return installer_builder.innosetup.innosetup
+   from .innosetup import innosetup
+   return innosetup
   elif platform.system() == 'Darwin':
+   import py2app.build_app
    return py2app.build_app.py2app
 
  def perform_postbuild_commands(self):
@@ -321,8 +323,9 @@ class InstallerBuilder(object):
   if is_mac:
    setup_arguments['app'] = [self.main_module]
   if is_windows:
+   from . import innosetup
    setup_arguments[self.app_type][0]['other_resources'] = innosetup.manifest(self.name),
-  res = setuptools.setup(**setup_arguments)
+  setuptools.setup(**setup_arguments)
 
  def get_copyright(self):
   return "Copyright ©%d %s" % (datetime.date.today().year, self.author)
