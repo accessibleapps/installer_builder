@@ -974,7 +974,7 @@ class InnoScript(object):
                         k,
                         consts[k],
                     )
-                ).encode("utf_8")
+                )
             )
 
         fp.write("\n")
