@@ -242,7 +242,7 @@ def sign(filename, url='', description='', timestamp_server=DEFAULT_TIMESTAMP_SE
         raise
     
     # Build the command
-    command = f'"{signtool_path}" sign /t {timestamp_server}'
+    command = f'"{signtool_path}" sign /fd SHA256 /t {timestamp_server}'
     if url:
         command += f' /du {url}'
     if description:
