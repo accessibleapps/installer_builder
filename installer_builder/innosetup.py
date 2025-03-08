@@ -166,9 +166,12 @@ History
 """
 
 from __future__ import absolute_import, print_function
+from modulefinder import packagePathMap
+import distutils.command
 
 import ctypes
 import imp
+import io
 import os
 import platform
 import re
@@ -183,7 +186,6 @@ except ImportError:
 
 import distutils.msvccompiler
 import shutil
-from io import StringIO
 from xml.etree import ElementTree
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -320,7 +322,8 @@ def srcname(dottedname):
     name, ext = os.path.splitext(filename)
     ext = ext.lower()
 
-    _py_src_suffixes = [i[0] for i in imp.get_suffixes() if i[2] == imp.PY_SOURCE]
+    _py_src_suffixes = [i[0]
+                        for i in imp.get_suffixes() if i[2] == imp.PY_SOURCE]
 
     if ext not in build_exe._py_suffixes:
         raise ValueError("not python script")
@@ -409,12 +412,17 @@ def getregvalue(path, default=None):
         return default
 
 
-class IssFile(StringIO):
+class IssFile(io.TextIOWrapper):
     """file object with useful method `issline`"""
 
     noescape = [
         "Flags",
     ]
+
+    def __init__(self, filename, mode='w', encoding='utf-8'):
+        # Open a buffered binary file and wrap it
+        binary_file = open(filename, mode.replace('t', '') + 'b')
+        super().__init__(binary_file, encoding=encoding)
 
     def issline(self, **kwargs):
         args = []
@@ -493,7 +501,7 @@ class InnoScript(object):
                 if lines:
                     yield firstline, sectionname, lines
                 firstline = line
-                sectionname = line[1 : line.index("]")].strip()
+                sectionname = line[1: line.index("]")].strip()
                 lines = []
             else:
                 lines.append(line)
@@ -507,7 +515,7 @@ class InnoScript(object):
         if dirname[-1] not in "\\/":
             dirname += "\\"
         if filename.startswith(dirname):
-            filename = filename[len(dirname) :]
+            filename = filename[len(dirname):]
         # else:
         # filename = os.path.basename(filename)
         return filename
@@ -621,7 +629,8 @@ class InnoScript(object):
 
     def handle_iss_setup(self, lines, fp):
         metadata = self.metadata
-        iss_metadata = dict((k, v % metadata) for k, v in self.metadata_map.items())
+        iss_metadata = dict((k, v % metadata)
+                            for k, v in self.metadata_map.items())
         iss_metadata["OutputDir"] = self.builder.dist_dir
         iss_metadata["AppId"] = self.appid
 
@@ -707,7 +716,8 @@ class InnoScript(object):
 
         # problem with py2exe
         if self.builder.bundle_files < 2:
-            excludes.extend(findfiles(files, os.path.basename(modname(sys.dllhandle))))
+            excludes.extend(
+                findfiles(files, os.path.basename(modname(sys.dllhandle))))
 
         # Python 2.6 or later doesn't support Windows 9x and me.
         if sys.version_info > (2, 6):
@@ -833,7 +843,8 @@ class InnoScript(object):
                     Parameters="/unregister",
                     WorkingDir="{app}",
                     Flags="runhidden",
-                    StatusMsg="Unregistering %s..." % os.path.basename(filename),
+                    StatusMsg="Unregistering %s..." % os.path.basename(
+                        filename),
                 )
 
         it = self._iter_bin_files("service_exe_files", lines)
@@ -845,7 +856,8 @@ class InnoScript(object):
                     Parameters="-remove",
                     WorkingDir="{app}",
                     Flags="runhidden",
-                    StatusMsg="Unregistering %s..." % os.path.basename(filename),
+                    StatusMsg="Unregistering %s..." % os.path.basename(
+                        filename),
                 )
             elif cmdline_style == "pywin32":
                 fp.issline(
@@ -860,7 +872,8 @@ class InnoScript(object):
                     Parameters="remove",
                     WorkingDir="{app}",
                     Flags="runhidden",
-                    StatusMsg="Unregistering %s..." % os.path.basename(filename),
+                    StatusMsg="Unregistering %s..." % os.path.basename(
+                        filename),
                 )
 
     def handle_iss_icons(self, lines, fp):
@@ -938,7 +951,7 @@ class InnoScript(object):
             inno_script = self.builder.inno_script
         if self.builder.extra_inno_script is not None:
             inno_script += "\n%s" % self.builder.extra_inno_script
-        fp = IssFile(self.issfile, "w", encoding="utf_8")
+        fp = IssFile(self.issfile, "wt")
         #  fp.write(codecs.BOM_UTF8)
         #  fp.write('; This file is created by distutils InnoSetup extension.\n')
 
@@ -971,7 +984,8 @@ class InnoScript(object):
         for firstline, name, lines in self.parse_iss(inno_script):
             if firstline:
                 fp.write(firstline + "\n")
-            handler = getattr(self, "handle_iss_%s" % name.lower(), self.handle_iss)
+            handler = getattr(self, "handle_iss_%s" %
+                              name.lower(), self.handle_iss)
             handler(lines, fp)
             fp.write("\n")
             sections.add(name)
@@ -1003,9 +1017,11 @@ class InnoScript(object):
             zip.write(setupfile, os.path.basename(setupfile))
             zip.close()
 
-            self.builder.distribution.dist_files.append(("innosetup", "", zipname))
+            self.builder.distribution.dist_files.append(
+                ("innosetup", "", zipname))
         else:
-            self.builder.distribution.dist_files.append(("innosetup", "", setupfile))
+            self.builder.distribution.dist_files.append(
+                ("innosetup", "", setupfile))
 
     @property
     def setup_file_path(self):
@@ -1118,7 +1134,6 @@ class innosetup(py2exe):
 #
 # register command
 #
-import distutils.command
 
 distutils.command.__all__.append("innosetup")
 sys.modules["distutils.command.innosetup"] = sys.modules[__name__]
@@ -1127,7 +1142,6 @@ sys.modules["distutils.command.innosetup"] = sys.modules[__name__]
 #
 # fix a problem py2exe.mf misses some modules
 #
-from modulefinder import packagePathMap
 
 
 class PackagePathMap(object):
@@ -1206,7 +1220,8 @@ def _isSystemDLL(pathname):
     file.seek(pe_ofs)
     if file.read(4) != "PE\000\000":
         raise Exception("Seems not to be an exe-file", pathname)
-    file.read(20 + 28)  # COFF File Header, offset of ImageBase in Optional Header
+    # COFF File Header, offset of ImageBase in Optional Header
+    file.read(20 + 28)
     imagebase = struct.unpack("I", file.read(4))[0]
     return not (imagebase < 0x70000000)
 
@@ -1254,7 +1269,7 @@ if __name__ == "__main__":
         url="http://pypi.python.org/pypi/innosetup",
         platforms="win32, win64",
         classifiers=[
-            #'Development Status :: 4 - Beta',
+            # 'Development Status :: 4 - Beta',
             "Development Status :: 5 - Production/Stable",
             "Environment :: Win32 (MS Windows)",
             "Intended Audience :: Developers",
