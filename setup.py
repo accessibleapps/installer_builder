@@ -2,15 +2,15 @@ from setuptools import setup, find_packages
 import sys
 import os
 
-install_requires = []
+install_requires = ['setuptools']
 if sys.platform == 'win32':
  if int(sys.version[0]) < 3:
-  install_requires = ['py2exe_py2', 'pywin32']
+  install_requires .extend(['py2exe_py2', 'pywin32'])
  else:
-  install_requires = ['py2exe', 'pywin32']
+  install_requires .extend(['py2exe', 'pywin32'])
 
 __name__ = "installer_builder"
-__version__ = "1.5.0"
+__version__ = "1.5.1"
 __doc__ = """Easily generate installers for multiple platforms"""
 
 # Read the long description from README.md
