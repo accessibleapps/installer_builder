@@ -188,7 +188,7 @@ from xml.etree import ElementTree
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import win32api  # for read pe32 resource
-from py2exe.distutils_buildexe import *
+from py2exe.distutils_buildexe import py2exe
 
 try:
  from py2exe import build_exe
@@ -860,7 +860,7 @@ class InnoScript(object):
    inno_script = self.builder.inno_script
   if self.builder.extra_inno_script is not None:
    inno_script += "\n%s" % self.builder.extra_inno_script
-  fp = IssFile(self.issfile, 'w')
+  fp = IssFile(self.issfile, 'w', encoding='utf_8')
 #  fp.write(codecs.BOM_UTF8)
 #  fp.write('; This file is created by distutils InnoSetup extension.\n')
 
@@ -905,7 +905,7 @@ class InnoScript(object):
 
   # zip the setup file
   if self.builder.zip:
-   if isinstance(self.builder.zip, basestring):
+   if isinstance(self.builder.zip, str):
     zipname = self.builder.zip
    else:
     zipname = setupfile + '.zip'
