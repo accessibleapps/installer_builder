@@ -697,10 +697,8 @@ class InnoScript(object):
         files = []
         excludes = []
 
-        files.extend(self.builder.windows_exe_files)
         if self.builder.bundle_vcr:
             files.extend(self.msvcfiles)
-        files.extend(self.builder.lib_files)  # include data_files
 
         # problem with py2exe
         if self.builder.bundle_files < 2:
