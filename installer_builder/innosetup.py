@@ -737,27 +737,6 @@ class InnoScript(object):
                     place = os.path.dirname(relname)
 
                 extraargs = {}
-                if filename in self.builder.comserver_files:
-                    if filename.lower().endswith(".exe"):
-                        extraargs["BeforeInstall"] = (
-                            "ExecIfExists('{app}\\%s', '/unregister')" % relname
-                        )
-                    else:
-                        flags.append("regserver")
-                        extraargs["BeforeInstall"] = (
-                            "UnregisterServerIfExists('{app}\\%s')" % relname
-                        )
-                elif filename in self.builder.service_exe_files:
-                    cmdline_style = self.builder.fileinfo[filename]["cmdline_style"]
-                    if cmdline_style == "py2exe":
-                        extraargs["BeforeInstall"] = (
-                            "ExecIfExists('{app}\\%s', '-remove')" % relname
-                        )
-                    elif cmdline_style == "pywin32":
-                        extraargs["BeforeInstall"] = (
-                            "UnregisterPywin32Service('{app}\\%s')" % relname
-                        )
-
             else:  # isdir
                 if filename.startswith(self.builder.dist_dir):
                     place = relname
