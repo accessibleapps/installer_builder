@@ -633,10 +633,6 @@ class InnoScript(object):
                             for k, v in self.metadata_map.items())
         iss_metadata["OutputDir"] = self.builder.dist_dir
         iss_metadata["AppId"] = self.appid
-
-        if self.builder.service_exe_files or self.builder.comserver_files:
-            iss_metadata["PrivilegesRequired"] = "admin"
-
         # add InfoBeforeFile
         for filename in (
             "README",
@@ -654,11 +650,6 @@ class InnoScript(object):
             if os.path.isfile(filename):
                 iss_metadata["LicenseFile"] = os.path.abspath(filename)
                 break
-
-        # Python 2.6 doesn't support Windows 9x and me.
-        # if sys.version_info > (2, 6):
-        # iss_metadata['MinVersion'] = '5.0,5.0'
-
         # handle user operations
         user = {}
         for line in lines:
@@ -693,7 +684,7 @@ class InnoScript(object):
                         k,
                         iss_metadata[k],
                     )
-                ).encode("utf_8")
+                )
             )
 
         self.iss_metadata = {}

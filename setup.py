@@ -10,7 +10,7 @@ if sys.platform == 'win32':
   install_requires .extend(['py2exe', 'pywin32'])
 
 __name__ = "installer_builder"
-__version__ = "1.5.2"
+__version__ = "1.5.3"
 __doc__ = """Easily generate installers for multiple platforms"""
 
 # Read the long description from README.md
