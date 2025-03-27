@@ -28,7 +28,7 @@ if "_" not in __builtin__.__dict__:
 	__builtin__.__dict__["__"] = lambda x: x
 	__builtin__.__dict__["lngettext"] = lambda *a: [i for i in a]
 
-__version__ = 0.5
+__version__ = "1.5.3"
 
 
 class InstallerBuilder(object):
