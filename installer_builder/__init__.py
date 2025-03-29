@@ -174,17 +174,29 @@ class InstallerBuilder(object):
 			if pkg_datafile_function is None:
 				pkg = importlib.import_module(package)
 				pkg_datafile_function = pkg.find_datafiles
-			datafiles.extend(pkg_datafile_function())
+			pkg_datafiles = pkg_datafile_function()
+			datafiles.extend(pkg_datafiles)
+			print("Added %d datafiles from package %s" % (len(pkg_datafiles), package))
+			
 		if self.has_translations:
-			datafiles.extend(self.find_application_language_data())
-			datafiles.extend(self.find_babel_datafiles())
+			app_lang_data = list(self.find_application_language_data())
+			datafiles.extend(app_lang_data)
+			print("Added %d application language datafiles" % len(app_lang_data))
+			
+			babel_data = list(self.find_babel_datafiles())
+			datafiles.extend(babel_data)
+			print("Added %d babel datafiles" % len(babel_data))
+			
 		for package in self.localized_packages:
 			pkg = importlib.import_module(package)
 			path = pkg.__path__[0]
 			locale_path = os.path.join(path, self.locale_dir)
-			files = self.find_locale_data(locale_path)
-			datafiles.extend(list(files))
-			print("Added locale data for %s" % package)
+			files = list(self.find_locale_data(locale_path))
+			datafiles.extend(files)
+			print("Added %d locale datafiles for %s" % (len(files), package))
+			
+		total_datafiles = len(self.datafiles) + len(datafiles)
+		print("Total datafiles to be included: %d" % total_datafiles)
 		return self.datafiles + datafiles
 
 	def find_application_language_data(self):
@@ -539,16 +551,24 @@ def get_datafiles(directory="share", match="*", target_path=None):
 
 	.. todo:: exclude pattern
 	"""
+	print("Searching for datafiles in directory: %s with pattern: %s" % (directory, match))
 	ppath = os.path.split(os.path.abspath(sys.executable))[0]
 	site_packages = os.path.join(ppath, "lib", "site-packages", "")
 	datafiles = []
 	matches = []
+	
 	for root, dirnames, filenames in os.walk(directory):
 		target_path = root.replace(site_packages, "")
-		for filename in fnmatch.filter(filenames, match):
+		matched_files = fnmatch.filter(filenames, match)
+		if matched_files:
+			print("  Found %d matching files in %s" % (len(matched_files), root))
+			
+		for filename in matched_files:
 			matches.append(os.path.join(root, filename))
 			this_filename = os.path.join(root, filename)
 			datafiles.append((target_path, [this_filename]))
+	
+	print("Total files found matching '%s' in %s: %d" % (match, directory, len(datafiles)))
 	return datafiles
 
 
@@ -556,9 +576,11 @@ def pytz_datafiles():
 	import pytz
 
 	path = os.path.join(os.path.split(pytz.__file__)[0], "zoneinfo")
+	print("Collecting pytz datafiles from: %s" % path)
 	files = get_datafiles(path, "*")
 	index = path.index("zoneinfo")
 	files = [(i[0][index:], i[1]) for i in files]
+	print("Found %d pytz zoneinfo files" % len(files))
 	return files
 
 
@@ -566,11 +588,25 @@ def enchant_datafiles():
 	import enchant
 
 	enchant_path = os.path.split(enchant.__file__)[0]
-	files = get_datafiles(enchant_path, "*.dll")
-	files.extend(get_datafiles(enchant_path, "*.dic", target_path=""))
-	files.extend(get_datafiles(enchant_path, "*.aff", target_path=""))
+	print("Collecting enchant datafiles from: %s" % enchant_path)
+	
+	dll_files = get_datafiles(enchant_path, "*.dll")
+	print("Found %d enchant DLL files" % len(dll_files))
+	
+	dic_files = get_datafiles(enchant_path, "*.dic", target_path="")
+	print("Found %d enchant dictionary files" % len(dic_files))
+	
+	aff_files = get_datafiles(enchant_path, "*.aff", target_path="")
+	print("Found %d enchant affix files" % len(aff_files))
+	
+	files = []
+	files.extend(dll_files)
+	files.extend(dic_files)
+	files.extend(aff_files)
+	
 	index = enchant_path.index("enchant") + 8
 	files = [(i[0][index:], i[1]) for i in files]
+	print("Total enchant datafiles: %d" % len(files))
 	return files
 
 
