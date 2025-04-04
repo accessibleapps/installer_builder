@@ -561,8 +561,14 @@ class InnoScript(object):
 
     @property
     def msvcfiles(self):
+        msvc_ver = distutils.msvccompiler.get_build_version()
+        # For VS 2015 (14.0) and later, assume py2exe bundles the necessary
+        # Universal CRT DLLs (vcruntime140.dll, ucrtbase.dll, etc.) or
+        # that the target system has the VCRedist installed.
+        if msvc_ver >= 14.0:
+            return  # Yield nothing
         # msvcrXX
-        vcver = "%.2d" % (distutils.msvccompiler.get_build_version() * 10,)
+        vcver = "%.2d" % (msvc_ver * 10,)
         assemblename = "Microsoft.VC%s.CRT" % vcver
         msvcr = None
         if int(vcver) < 130:
