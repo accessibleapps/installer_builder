@@ -564,10 +564,14 @@ class InnoScript(object):
         # msvcrXX
         vcver = "%.2d" % (distutils.msvccompiler.get_build_version() * 10,)
         assemblename = "Microsoft.VC%s.CRT" % vcver
-        msvcr = getattr(ctypes.windll, "msvcr" + vcver)
+        msvcr = None
+        if int(vcver) < 130:
+            msvcr = getattr(ctypes.windll, "msvcr" + vcver)
+            vcrname = modname(msvcr._handle)
+        else:
+            vcrname = None
+            yield vcrname
         msvcp = getattr(ctypes.windll, "msvcp" + vcver)
-        vcrname = modname(msvcr._handle)
-        yield vcrname
         vcpname = modname(msvcp._handle)
         yield vcpname
 
