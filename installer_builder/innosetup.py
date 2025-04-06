@@ -853,6 +853,17 @@ class InnoScript(object):
 
     def handle_iss_icons(self, lines, fp):
         self.handle_iss(lines, fp)
+        for _, filename in self._iter_bin_files("windows_exe_files", lines):
+            fp.issline(
+                Name="{group}\\%s" % self.metadata["name"],
+                Filename="{app}\\%s" % filename,
+            )
+
+        if self.builder.windows_exe_files:
+            fp.issline(
+                Name="{group}\\Uninstall %s" % self.metadata["name"],
+                Filename="{uninstallexe}",
+            )
         # Desktop icon
         fp.issline(
             Name="{commondesktop}\\%s" % self.metadata["name"],
