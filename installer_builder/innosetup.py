@@ -166,11 +166,10 @@ History
 """
 
 from __future__ import absolute_import, print_function
-from modulefinder import packagePathMap
 import distutils.command
+import distutils.core
 
 import ctypes
-import imp
 import io
 import os
 import platform
@@ -178,13 +177,10 @@ import re
 import subprocess
 import sys
 import uuid
+import importlib.machinery
+import importlib.util
 
-try:
-    import _winreg
-except ImportError:
-    import winreg as _winreg
-
-import distutils.msvccompiler
+import winreg
 import shutil
 from xml.etree import ElementTree
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -192,12 +188,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import win32api  # for read pe32 resource
 from py2exe.distutils_buildexe import py2exe
 
-try:
-    from py2exe import build_exe
-    from py2exe import mf as modulefinder
-except ImportError:
-    from py2exe import build_exe
-    from py2exe import mf34 as modulefinder
+# Modern py2exe uses a different approach
+import py2exe
 
 
 from . import signtool
@@ -238,64 +230,54 @@ end;
 }
 
 
-def manifest(name, res_id=1):
-    data = manifest.template % name
-    return RT_MANIFEST, res_id, data
-
-
-manifest.template = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+# Modern manifest template for Windows applications
+MANIFEST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-    <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1"> 
-        <application> 
-            <!-- Windows 10 -->
-            <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
-            <!-- Windows 8.1 -->
-            <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+    <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+        <application>
             <!-- Windows Vista -->
-            <supportedOS Id="{e2011457-1546-43c5-a5fe-008deee3d3f0}"/> 
+            <supportedOS Id="{e2011457-1546-43c5-a5fe-008deee3d3f0}"/>
             <!-- Windows 7 -->
             <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
             <!-- Windows 8 -->
             <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
-        </application> 
+            <!-- Windows 8.1 -->
+            <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+            <!-- Windows 10/11 -->
+            <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+        </application>
     </compatibility>
-<assemblyIdentity
- type="win32"
- name="Controls"
- version="5.0.0.0"
- processorArchitecture="x86"
- />
-<description>%s</description>
-<trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
-  <security>
-    <requestedPrivileges>
-      <requestedExecutionLevel level="asInvoker" uiAccess="false"></requestedExecutionLevel>
-    </requestedPrivileges>
-  </security>
-</trustInfo>
-<dependency>
-  <dependentAssembly>
-    <assemblyIdentity type="win32" name="Microsoft.VC90.CRT" version="9.0.21022.8" processorArchitecture="x86" publicKeyToken="1fc8b3b9a1e18e3b"></assemblyIdentity>
-  </dependentAssembly>
-</dependency>
-<dependency>
- <dependentAssembly>
-  <assemblyIdentity
-   type="win32"
-   name="Microsoft.Windows.Common-Controls"
-   version="6.0.0.0"
-   processorArchitecture="X86"
-   publicKeyToken="6595b64144ccf1df"
-   language="*"
-   />
- </dependentAssembly>
-</dependency>
-<application xmlns="urn:schemas-microsoft-com:asm.v3">
-    <windowsSettings>
-        <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
-    </windowsSettings>
-</application>
+    <assemblyIdentity
+     type="win32"
+     name="Controls"
+     version="5.0.0.0"
+     processorArchitecture="*"
+    />
+    <description>%s</description>
+    <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+        <security>
+            <requestedPrivileges>
+                <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+            </requestedPrivileges>
+        </security>
+    </trustInfo>
+    <dependency>
+        <dependentAssembly>
+            <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/>
+        </dependentAssembly>
+    </dependency>
+    <application xmlns="urn:schemas-microsoft-com:asm.v3">
+        <windowsSettings>
+            <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
+            <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+        </windowsSettings>
+    </application>
 </assembly>"""
+
+def manifest(name, res_id=1):
+    """Create a manifest resource with the given name."""
+    data = MANIFEST_TEMPLATE % name
+    return RT_MANIFEST, res_id, data.encode('utf-8')
 
 
 README_EXT = ".html"
@@ -322,11 +304,8 @@ def srcname(dottedname):
     name, ext = os.path.splitext(filename)
     ext = ext.lower()
 
-    _py_src_suffixes = [i[0]
-                        for i in imp.get_suffixes() if i[2] == imp.PY_SOURCE]
-
-    if ext not in build_exe._py_suffixes:
-        raise ValueError("not python script")
+    # Get source suffixes using importlib
+    _py_src_suffixes = [s.suffix for s in importlib.machinery.SOURCE_SUFFIXES]
 
     if ext in _py_src_suffixes:
         return filename
@@ -335,7 +314,7 @@ def srcname(dottedname):
         if os.path.isfile(name + i):
             return name + i
 
-    raise ValueError("not found")
+    raise ValueError(f"Source file not found for {dottedname}")
 
 
 def srcnames(*args):
@@ -372,13 +351,12 @@ def findfiles(filenames, *conditions):
 
 
 hkshortnames = {
-    "HKLM": _winreg.HKEY_LOCAL_MACHINE,
-    "HKCU": _winreg.HKEY_CURRENT_USER,
-    "HKCR": _winreg.HKEY_CLASSES_ROOT,
-    "HKU": _winreg.HKEY_USERS,
-    "HKCC": _winreg.HKEY_CURRENT_CONFIG,
-    "HKDD": _winreg.HKEY_DYN_DATA,
-    "HKPD": _winreg.HKEY_PERFORMANCE_DATA,
+    "HKLM": winreg.HKEY_LOCAL_MACHINE,
+    "HKCU": winreg.HKEY_CURRENT_USER,
+    "HKCR": winreg.HKEY_CLASSES_ROOT,
+    "HKU": winreg.HKEY_USERS,
+    "HKCC": winreg.HKEY_CURRENT_CONFIG,
+    "HKPD": winreg.HKEY_PERFORMANCE_DATA,
 }
 
 
@@ -395,20 +373,20 @@ def getregvalue(path, default=None):
     """
     root, subkey = path.split("\\", 1)
     if root.startswith("HKEY_"):
-        root = getattr(_winreg, root)
+        root = getattr(winreg, root)
     elif root in hkshortnames:
         root = hkshortnames[root]
     else:
-        root = _winreg.HKEY_CURRENT_USER
+        root = winreg.HKEY_CURRENT_USER
         subkey = path
 
     subkey, name = subkey.rsplit("\\", 1)
 
     try:
-        handle = _winreg.OpenKey(root, subkey)
-        value, typeid = _winreg.QueryValueEx(handle, name)
+        handle = winreg.OpenKey(root, subkey)
+        value, typeid = winreg.QueryValueEx(handle, name)
         return value
-    except EnvironmentError:
+    except OSError:
         return default
 
 
@@ -423,24 +401,26 @@ class IssFile(io.TextIOWrapper):
         # Open a buffered binary file and wrap it
         binary_file = open(filename, mode.replace('t', '') + 'b')
         super().__init__(binary_file, encoding=encoding)
+        # Write BOM for better compatibility with Inno Setup
+        if 'w' in mode and encoding.lower() == 'utf-8':
+            self.write('\ufeff')  # UTF-8 BOM
 
     def issline(self, **kwargs):
         args = []
         for k, v in kwargs.items():
             if k not in self.noescape:
                 # ' -> ''
-                v = '"%s"' % v
-            args.append(
-                "%s: %s"
-                % (
-                    k,
-                    v,
-                )
-            )
+                if isinstance(v, str):
+                    v = '"%s"' % v.replace('"', '""')
+                else:
+                    v = '"%s"' % v
+            args.append(f"{k}: {v}")
         self.write("; ".join(args) + "\n")
 
 
 class InnoScript(object):
+    """Class to create and compile an Inno Setup script."""
+    
     consts_map = dict(
         AppName="%(name)s",
         AppVerName="%(name)s %(version)s",
@@ -457,7 +437,7 @@ class InnoScript(object):
         SolidCompression="yes",
         Compression="lzma",
         DefaultGroupName="%(name)s",
-        DefaultDirName="{pf}\\%(name)s",
+        DefaultDirName="{autopf}\\%(name)s",  # Use autopf for auto-detection of Program Files
         OutputBaseFilename="%(name)s-%(version)s-setup",
     )
     metadata_map.update(consts_map)
@@ -488,9 +468,42 @@ class InnoScript(object):
     )
     iss_metadata = {}
 
-    def __init__(self, builder):
-        self.builder = builder
-        self.issfile = os.path.join(self.builder.dist_dir, "distutils.iss")
+    def __init__(self, dist_dir, metadata, inno_script, inno_setup_exe=None, 
+                 bundle_vcr=True, register_startup=False, zip_option=False, 
+                 extra_inno_script=None):
+        """Initialize the InnoScript with the necessary parameters.
+        
+        Args:
+            dist_dir: Directory containing the py2exe output
+            metadata: Distribution metadata object
+            inno_script: Path to or content of the Inno Setup script
+            inno_setup_exe: Path to the Inno Setup compiler (ISCC.exe)
+            bundle_vcr: Whether to bundle VCR DLLs
+            register_startup: Whether to register the app to run at startup
+            zip_option: Whether to zip the setup file (True/False or filename)
+            extra_inno_script: Additional Inno Setup script content
+        """
+        self.dist_dir = dist_dir
+        self._metadata = metadata
+        self.issfile = os.path.join(dist_dir, "distutils.iss")
+        self.bundle_vcr = bundle_vcr
+        self.register_startup = register_startup
+        self.zip_option = zip_option
+        
+        # Handle inno_script (file path or content)
+        if os.path.isfile(inno_script):
+            with open(inno_script, 'r', encoding='utf-8') as f:
+                self.inno_script_content = f.read()
+        else:
+            self.inno_script_content = inno_script
+            
+        if extra_inno_script:
+            self.inno_script_content += f"\n{extra_inno_script}"
+            
+        self._inno_setup_exe = inno_setup_exe
+        
+        # Scan the dist directory to find files
+        self.created_files = self._scan_dist_dir()
 
     def parse_iss(self, s):
         firstline = ""
@@ -520,118 +533,154 @@ class InnoScript(object):
         # filename = os.path.basename(filename)
         return filename
 
+    def _scan_dist_dir(self):
+        """Scan the dist directory to categorize files."""
+        results = {
+            'executables': [],
+            'windows_exes': [],
+            'com_servers': [],
+            'services': [],
+            'dlls': [],
+            'data_files': [],
+            'lib_files': [],
+            'other': [],
+        }
+        
+        # Walk through the dist directory
+        for root, dirs, files in os.walk(self.dist_dir):
+            for fname in files:
+                fpath = os.path.join(root, fname)
+                ext = os.path.splitext(fname)[1].lower()
+                
+                if ext == '.exe':
+                    results['executables'].append(fpath)
+                    # Try to determine the type of executable
+                    # This is a simplistic approach - in a real implementation
+                    # we would need more information from py2exe
+                    if 'w' in fname.lower() or 'win' in fname.lower():
+                        results['windows_exes'].append(fpath)
+                elif ext in ('.dll', '.pyd'):
+                    results['dlls'].append(fpath)
+                    # Check if it's a COM server DLL
+                    if 'com' in fname.lower():
+                        results['com_servers'].append(fpath)
+                    # Check if it's a service DLL
+                    elif 'service' in fname.lower():
+                        results['services'].append(fpath)
+                else:
+                    # Basic categorization for other files
+                    results['data_files'].append(fpath)
+                    
+        return results
+
     @property
     def metadata(self):
-        metadata = dict(
-            (k, v or "") for k, v in self.builder.distribution.metadata.__dict__.items()
-        )
+        """Get metadata as a dictionary."""
+        metadata = {}
+        for attr in dir(self._metadata):
+            if not attr.startswith('_'):
+                value = getattr(self._metadata, attr, "")
+                metadata[attr] = value if value is not None else ""
         return metadata
 
     @property
     def appid(self):
+        """Generate a consistent AppID based on metadata."""
         m = self.metadata
         if m["url"]:
             src = m["url"]
         elif m["name"] and m["version"] and m["author_email"]:
-            src = "mailto:%(author_email)s?subject=%(name)s-%(version).1s" % m
+            src = f"mailto:{m['author_email']}?subject={m['name']}-{m['version']}"
         elif m["name"] and m["author_email"]:
-            src = "mailto:%(author_email)s?subject=%(name)s" % m
+            src = f"mailto:{m['author_email']}?subject={m['name']}"
         else:
             return m["name"]
         appid = uuid.uuid5(uuid.NAMESPACE_URL, src).urn.rsplit(":", 1)[1]
-        return "{{%s}" % appid
+        return f"{{{appid}}}"
 
     @property
     def iss_consts(self):
+        """Get constants for the ISS file."""
         metadata = self.metadata
         return dict((k, v % metadata) for k, v in self.consts_map.items())
 
     @property
     def innoexepath(self):
-        result = getregvalue(
-            "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion"
-            "\\Uninstall\\Inno Setup 6_is1\\InstallLocation"
-        )
-        if not result:
-            result = getregvalue(
-                "HKLM\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows"
-                "\\CurrentVersion\\Uninstall\\Inno Setup 6_is1\\InstallLocation"
-            )
-        return self.builder.inno_setup_exe or os.path.join(result or "", "ISCC.exe")
+        """Find the Inno Setup compiler executable."""
+        if self._inno_setup_exe and os.path.isfile(self._inno_setup_exe):
+            return self._inno_setup_exe
+            
+        # Try registry (prefer 64-bit view first)
+        keys_to_try = [
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1", winreg.KEY_READ | winreg.KEY_WOW64_64KEY),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1", winreg.KEY_READ | winreg.KEY_WOW64_32KEY),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1", winreg.KEY_READ | winreg.KEY_WOW64_64KEY),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1", winreg.KEY_READ | winreg.KEY_WOW64_32KEY),
+        ]
+        
+        for root, key, flags in keys_to_try:
+            try:
+                with winreg.OpenKey(root, key, 0, flags) as handle:
+                    install_location, _ = winreg.QueryValueEx(handle, "InstallLocation")
+                    if install_location:
+                        iscc_path = os.path.join(install_location, "ISCC.exe")
+                        if os.path.isfile(iscc_path):
+                            return iscc_path
+            except OSError:
+                continue
+
+        # Try default Program Files locations
+        for pf_var in ["ProgramFiles", "ProgramFiles(x86)"]:
+            pf_path = os.environ.get(pf_var)
+            if pf_path:
+                iscc_path = os.path.join(pf_path, "Inno Setup 6", "ISCC.exe")
+                if os.path.isfile(iscc_path):
+                    return iscc_path
+                    
+        # Last resort - just return the filename and hope it's in PATH
+        return "ISCC.exe"
 
     @property
     def msvcfiles(self):
-        msvc_ver = distutils.msvccompiler.get_build_version()
-        # For VS 2015 (14.0) and later, assume py2exe bundles the necessary
-        # Universal CRT DLLs (vcruntime140.dll, ucrtbase.dll, etc.) or
-        # that the target system has the VCRedist installed.
-        if msvc_ver >= 14.0:
-            return  # Yield nothing
-        # msvcrXX
-        vcver = "%.2d" % (msvc_ver * 10,)
-        assemblename = "Microsoft.VC%s.CRT" % vcver
-        msvcr = None
-        if int(vcver) < 130:
-            msvcr = getattr(ctypes.windll, "msvcr" + vcver)
-            vcrname = modname(msvcr._handle)
-        else:
-            vcrname = None
-            yield vcrname
-        msvcp = getattr(ctypes.windll, "msvcp" + vcver)
-        vcpname = modname(msvcp._handle)
-        yield vcpname
-
-        # bundled file
-        manifestfile = os.path.join(
-            os.path.dirname(vcrname), assemblename + ".manifest"
-        )
-        if os.path.isfile(manifestfile):
-            pass
-
-        # SxS
-        else:
-            manifestfile = os.path.join(
-                self.builder.dist_dir, assemblename + ".manifest"
-            )
-
-            doc = ElementTree.fromstring(load_manifest(sys.dllhandle))
-            for e in doc.getiterator(
-                "{urn:schemas-microsoft-com:asm.v1}assemblyIdentity"
-            ):
-                if e.attrib["name"] == assemblename:
-                    break
-            else:
-                raise EnvironmentError("no msvcr manifest file found")
-
-            dirname = os.path.join(
-                os.path.dirname(os.path.dirname(vcrname)), "Manifests"
-            )
+        """Get MSVC runtime files if needed.
+        
+        Note: For modern Python (3.5+), this is usually not needed as py2exe
+        handles the runtime dependencies.
+        """
+        # For Python 3.5+ with VS 2015 (14.0) and later, py2exe bundles the necessary
+        # Universal CRT DLLs or the target system has the VCRedist installed.
+        if sys.version_info >= (3, 5):
+            return []  # Yield nothing for modern Python
+            
+        # This is legacy code for older Python versions
+        import distutils.msvccompiler
+        try:
+            msvc_ver = distutils.msvccompiler.get_build_version()
+        except AttributeError:
+            # Modern Python doesn't expose this
+            return []
+            
+        files_to_include = []
+        
+        # Only proceed for older MSVC versions
+        if msvc_ver < 14.0:
+            vcver = "%.2d" % (msvc_ver * 10,)
             try:
-                src = os.path.join(
-                    dirname,
-                    findfiles(
-                        os.listdir(dirname),
-                        assemblename,
-                        e.attrib["version"],
-                        e.attrib["processorArchitecture"],
-                        ".manifest",
-                    )[0],
-                )
-            except IndexError:
-                raise EnvironmentError(
-                    "Could not find a copy of the Visual Studio Redistributable version 9.0.21022. Obtain it from https://www.microsoft.com/en-ca/download/details.aspx?id=29"
-                )
-            data = open(src, "rb").read()
-            open(manifestfile, "wb").write(data)
-
-        yield manifestfile
-
-        # mfc files
-        mfcfiles = findfiles(self.builder.other_depends, "mfc%s.dll" % vcver)
-        if mfcfiles:
-            dirname = os.path.dirname(mfcfiles[0])
-            for i in findfiles(os.listdir(dirname), "mfc"):
-                yield os.path.join(dirname, i)
+                # Try to find the runtime DLLs
+                if hasattr(ctypes.windll, "msvcr" + vcver):
+                    msvcr = getattr(ctypes.windll, "msvcr" + vcver)
+                    vcrname = modname(msvcr._handle)
+                    files_to_include.append(vcrname)
+                
+                if hasattr(ctypes.windll, "msvcp" + vcver):
+                    msvcp = getattr(ctypes.windll, "msvcp" + vcver)
+                    vcpname = modname(msvcp._handle)
+                    files_to_include.append(vcpname)
+            except (AttributeError, WindowsError):
+                # If we can't load the DLLs, just continue
+                pass
+                
+        return files_to_include
 
     def handle_iss(self, lines, fp):
         for line in lines:
@@ -704,24 +753,25 @@ class InnoScript(object):
         fp.write("\n")
 
     def handle_iss_files(self, lines, fp):
+        """Handle the [Files] section of the ISS file."""
         files = []
         excludes = []
 
-        if self.builder.bundle_vcr:
+        # Add MSVC runtime files if needed
+        if self.bundle_vcr:
             files.extend(self.msvcfiles)
 
-        # problem with py2exe
-        if self.builder.bundle_files < 2:
-            excludes.extend(
-                findfiles(files, os.path.basename(modname(sys.dllhandle))))
+        # Python 3 doesn't support Windows 9x and me
+        excludes.extend(findfiles(files, "w9xpopen.exe"))
 
-        # Python 2.6 or later doesn't support Windows 9x and me.
-        if sys.version_info > (2, 6):
-            excludes.extend(findfiles(files, "w9xpopen.exe"))
-
-        # handle Tkinter
-        if "Tkinter" in self.builder.modules:
-            tcl_dst_dir = os.path.join(self.builder.lib_dir, "tcl")
+        # Add all files from the dist directory
+        files.extend(self.created_files.get('executables', []))
+        files.extend(self.created_files.get('dlls', []))
+        files.extend(self.created_files.get('data_files', []))
+        
+        # Handle Tkinter if present
+        if os.path.exists(os.path.join(self.dist_dir, "tcl")):
+            tcl_dst_dir = os.path.join(self.dist_dir, "tcl")
             files.append(tcl_dst_dir)
 
         stored = set()
@@ -741,12 +791,12 @@ class InnoScript(object):
                     flags.append("restartreplace")
                     flags.append("uninsrestartdelete")
 
-                if filename.startswith(self.builder.dist_dir):
+                if filename.startswith(self.dist_dir):
                     place = os.path.dirname(relname)
 
                 extraargs = {}
             else:  # isdir
-                if filename.startswith(self.builder.dist_dir):
+                if filename.startswith(self.dist_dir):
                     place = relname
                 relname += "\\*"
                 flags.extend(self.default_dir_flags)
@@ -761,17 +811,18 @@ class InnoScript(object):
 
         self.handle_iss(lines, fp)
 
-    def _iter_bin_files(self, attrname, lines=[]):
-        for filename in getattr(self.builder, attrname, []):
+    def _iter_bin_files(self, category, lines=[]):
+        """Iterate over binary files of a specific category."""
+        for filename in self.created_files.get(category, []):
             relname = self.chop(filename)
             if relname in "".join(lines):
                 continue
             yield filename, relname
 
     def handle_iss_run(self, lines, fp):
-        self.handle_iss(lines, fp)
-
-        for _, filename in self._iter_bin_files("comserver_files", lines):
+        """Handle the [Run] section of the ISS file."""
+        # Process COM servers
+        for _, filename in self._iter_bin_files("com_servers", lines):
             if filename.lower().endswith(".exe"):
                 fp.issline(
                     Filename="{app}\\%s" % filename,
@@ -781,9 +832,11 @@ class InnoScript(object):
                     StatusMsg="Registering %s..." % os.path.basename(filename),
                 )
 
-        it = self._iter_bin_files("service_exe_files", lines)
-        for orgname, filename in it:
-            cmdline_style = self.builder.fileinfo[orgname]["cmdline_style"]
+        # Process services
+        for _, filename in self._iter_bin_files("services", lines):
+            # Assume pywin32 style by default
+            cmdline_style = "pywin32"
+            
             if cmdline_style == "py2exe":
                 fp.issline(
                     Filename="{app}\\%s" % filename,
@@ -807,32 +860,34 @@ class InnoScript(object):
                     Flags="runhidden",
                     StatusMsg="Starting %s..." % os.path.basename(filename),
                 )
-
-    def handle_iss_uninstallrun(self, lines, fp):
+                
         self.handle_iss(lines, fp)
 
-        for _, filename in self._iter_bin_files("comserver_files", lines):
+    def handle_iss_uninstallrun(self, lines, fp):
+        """Handle the [UninstallRun] section of the ISS file."""
+        # Process COM servers
+        for _, filename in self._iter_bin_files("com_servers", lines):
             if filename.lower().endswith(".exe"):
                 fp.issline(
                     Filename="{app}\\%s" % filename,
                     Parameters="/unregister",
                     WorkingDir="{app}",
                     Flags="runhidden",
-                    StatusMsg="Unregistering %s..." % os.path.basename(
-                        filename),
+                    StatusMsg="Unregistering %s..." % os.path.basename(filename),
                 )
 
-        it = self._iter_bin_files("service_exe_files", lines)
-        for orgname, filename in it:
-            cmdline_style = self.builder.fileinfo[orgname]["cmdline_style"]
+        # Process services
+        for _, filename in self._iter_bin_files("services", lines):
+            # Assume pywin32 style by default
+            cmdline_style = "pywin32"
+            
             if cmdline_style == "py2exe":
                 fp.issline(
                     Filename="{app}\\%s" % filename,
                     Parameters="-remove",
                     WorkingDir="{app}",
                     Flags="runhidden",
-                    StatusMsg="Unregistering %s..." % os.path.basename(
-                        filename),
+                    StatusMsg="Unregistering %s..." % os.path.basename(filename),
                 )
             elif cmdline_style == "pywin32":
                 fp.issline(
@@ -847,53 +902,91 @@ class InnoScript(object):
                     Parameters="remove",
                     WorkingDir="{app}",
                     Flags="runhidden",
-                    StatusMsg="Unregistering %s..." % os.path.basename(
-                        filename),
+                    StatusMsg="Unregistering %s..." % os.path.basename(filename),
                 )
+                
+        self.handle_iss(lines, fp)
 
     def handle_iss_icons(self, lines, fp):
-        self.handle_iss(lines, fp)
-        for _, filename in self._iter_bin_files("windows_exe_files", lines):
+        """Handle the [Icons] section of the ISS file."""
+        # Find the main executable to use for shortcuts
+        main_exe = None
+        for _, filename in self._iter_bin_files("windows_exes", lines):
+            main_exe = filename
             fp.issline(
                 Name="{group}\\%s" % self.metadata["name"],
                 Filename="{app}\\%s" % filename,
             )
+            break
+            
+        # If no windows exe was found, try to use any executable
+        if not main_exe:
+            for _, filename in self._iter_bin_files("executables", lines):
+                main_exe = filename
+                fp.issline(
+                    Name="{group}\\%s" % self.metadata["name"],
+                    Filename="{app}\\%s" % filename,
+                )
+                break
 
-        if self.builder.windows_exe_files:
+        # Add uninstall shortcut
+        if main_exe:
             fp.issline(
                 Name="{group}\\Uninstall %s" % self.metadata["name"],
                 Filename="{uninstallexe}",
             )
-        # Desktop icon
-        fp.issline(
-            Name="{commondesktop}\\%s" % self.metadata["name"],
-            filename="{app}\\%s" % filename,
-            WorkingDir="{app}",
-            tasks="desktopicon",
-        )
+            
+            # Desktop icon (optional via task)
+            fp.issline(
+                Name="{commondesktop}\\%s" % self.metadata["name"],
+                Filename="{app}\\%s" % main_exe,
+                WorkingDir="{app}",
+                Tasks="desktopicon",
+            )
+            
+        self.handle_iss(lines, fp)
 
     def handle_iss_tasks(self, lines, fp):
-        self.handle_iss(lines, fp)
+        """Handle the [Tasks] section of the ISS file."""
         fp.issline(
             Name="desktopicon",
             Description="{cm:CreateDesktopIcon}",
             GroupDescription="{cm:AdditionalIcons}",
+            Flags="unchecked",  # Default to unchecked
         )
-        if self.builder.register_startup:
-            fp.issline(Name="startup", Description="Run at startup")
+        if self.register_startup:
+            fp.issline(
+                Name="startup", 
+                Description="Run at startup",
+                Flags="unchecked",
+            )
+            
+        self.handle_iss(lines, fp)
 
     def handle_iss_registry(self, lines, fp):
+        """Handle the [Registry] section of the ISS file."""
+        if self.register_startup:
+            # Find the main executable
+            main_exe = None
+            for filename in self.created_files.get('windows_exes', []):
+                main_exe = os.path.basename(filename)
+                break
+                
+            if not main_exe and self.created_files.get('executables', []):
+                main_exe = os.path.basename(self.created_files['executables'][0])
+                
+            if main_exe:
+                fp.issline(
+                    Root="HKCU",
+                    Subkey="Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+                    ValueType="string",
+                    ValueName=self.metadata["name"],
+                    ValueData="{app}\\%s" % main_exe,
+                    Flags="uninsdeletevalue",
+                    Tasks="startup",
+                )
+                
         self.handle_iss(lines, fp)
-        if self.builder.register_startup:
-            fp.issline(
-                Root="HKCU",
-                Subkey="Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-                ValueType="string",
-                ValueName=self.metadata["name"],
-                ValueData="{app}\%s.exe" % self.metadata["name"],
-                Flags="uninsdeletevalue",
-                Tasks="startup",
-            )
 
     def handle_iss_languages(self, lines, fp):
         self.handle_iss(lines, fp)
@@ -917,18 +1010,9 @@ class InnoScript(object):
         fp.write(DEFAULT_CODES)
 
     def create(self):
-        inno_script = os.path.join(
-            os.path.dirname(self.builder.dist_dir), self.builder.inno_script
-        )
-        if os.path.isfile(inno_script):
-            inno_script = open(inno_script).read()
-        else:
-            inno_script = self.builder.inno_script
-        if self.builder.extra_inno_script is not None:
-            inno_script += "\n%s" % self.builder.extra_inno_script
+        """Create the Inno Setup script file."""
         fp = IssFile(self.issfile, "wt")
-        #  fp.write(codecs.BOM_UTF8)
-        #  fp.write('; This file is created by distutils InnoSetup extension.\n')
+        fp.write('; This file is created by py2exe InnoSetup extension.\n')
 
         # write "#define CONSTANT value"
         consts = self.iss_consts
@@ -937,66 +1021,60 @@ class InnoScript(object):
                 "PYTHON_VERSION": "%d.%d" % sys.version_info[:2],
                 "PYTHON_VER": "%d%d" % sys.version_info[:2],
                 "PYTHON_DIR": sys.prefix,
-                "PYTHON_DLL": modname(sys.dllhandle),
+                "PYTHON_DLL": os.path.basename(sys.executable),
             }
         )
         consts.update((k.upper(), v) for k, v in self.metadata.items())
         for k in sorted(consts):
-            fp.write(
-                (
-                    '#define %s "%s"\n'
-                    % (
-                        k,
-                        consts[k],
-                    )
-                )
-            )
+            if consts[k]:  # Only write non-empty values
+                fp.write('#define %s "%s"\n' % (k, consts[k]))
 
         fp.write("\n")
 
         # handle sections
         sections = set()
-        for firstline, name, lines in self.parse_iss(inno_script):
+        for firstline, name, lines in self.parse_iss(self.inno_script_content):
             if firstline:
                 fp.write(firstline + "\n")
-            handler = getattr(self, "handle_iss_%s" %
-                              name.lower(), self.handle_iss)
+            handler = getattr(self, "handle_iss_%s" % name.lower(), self.handle_iss)
             handler(lines, fp)
             fp.write("\n")
             sections.add(name)
 
+        # Add any missing required sections
         for name in self.required_sections:
-            if name not in sections:
+            if name.lower() not in [s.lower() for s in sections]:
                 fp.write("[%s]\n" % name)
-                handler = getattr(self, "handle_iss_%s" % name.lower())
+                handler = getattr(self, "handle_iss_%s" % name.lower(), self.handle_iss)
                 handler([], fp)
                 fp.write("\n")
 
     def compile_script(self):
+        """Compile the Inno Setup script into an installer."""
         try:
             subprocess.check_call([self.innoexepath, self.issfile])
-        except WindowsError:
+        except (WindowsError, subprocess.CalledProcessError) as e:
             raise EnvironmentError(
-                "Please install InnoSetup to build an executable installer. "
+                f"Failed to compile the installer: {e}\n"
+                "Please ensure InnoSetup 6+ is installed correctly."
             )
         setupfile = self.setup_file_path
 
-        # zip the setup file
-        if self.builder.zip:
-            if isinstance(self.builder.zip, str):
-                zipname = self.builder.zip
+        # zip the setup file if requested
+        if self.zip_option:
+            if isinstance(self.zip_option, str):
+                zipname = self.zip_option
             else:
                 zipname = setupfile + ".zip"
 
-            zip = ZipFile(zipname, "w", ZIP_DEFLATED)
-            zip.write(setupfile, os.path.basename(setupfile))
-            zip.close()
-
-            self.builder.distribution.dist_files.append(
-                ("innosetup", "", zipname))
+            with ZipFile(zipname, "w", ZIP_DEFLATED, allowZip64=True) as zip_file:
+                zip_file.write(setupfile, os.path.basename(setupfile))
+                
+            print(f"Created zip file: {zipname}")
+            return zipname
         else:
-            self.builder.distribution.dist_files.append(
-                ("innosetup", "", setupfile))
+            print(f"Created installer: {setupfile}")
+            return setupfile
 
     @property
     def setup_file_path(self):
@@ -1012,221 +1090,188 @@ class InnoScript(object):
         )
 
 
-class innosetup(py2exe):
-    # setup()'s argument is in self.distribution.
-    user_options = py2exe.user_options + [
-        ("inno-setup-exe=", None, "a path to InnoSetup exe file (Compil32.exe)"),
-        (
-            "inno-script=",
-            None,
-            "a path to InnoSetup script file or an InnoSetup script string",
-        ),
-        ("extra-inno-script=", None, "an InnoSetup script string"),
-        ("certificate-file=", None, "Path to signing certificate"),
-        ("certificate-password=", None, "Password for signing certificate"),
-        ("extra-sign=", None, "Extra Files to be signed"),
-        (
-            "bundle-vcr=",
-            None,
-            "bundle msvc*XX.dll and mfc*.dll and their manifest files",
-        ),
-        ("zip=", None, "zip setup file"),
+class innosetup(distutils.core.Command):
+    """Create an installer using Inno Setup."""
+    
+    description = "create an executable installer using Inno Setup"
+    
+    user_options = [
+        ("inno-setup-exe=", None, "path to InnoSetup compiler (ISCC.exe)"),
+        ("inno-script=", None, "path to InnoSetup script file or script content"),
+        ("extra-inno-script=", None, "additional InnoSetup script content"),
+        ("certificate-file=", None, "path to signing certificate"),
+        ("certificate-password=", None, "password for signing certificate"),
+        ("extra-sign=", None, "extra files to be signed"),
+        ("bundle-vcr=", None, "bundle MSVC runtime DLLs (usually not needed)"),
+        ("zip=", None, "zip the setup file (True/False or filename)"),
+        ("register-startup=", None, "register application to run at startup"),
+        ("dist-dir=", "d", "directory to put final built distributions in"),
     ]
-    description = "create an executable file and an installer by InnoSetup"
-    fileinfo = {}
-    modules = {}
+    
+    boolean_options = ["bundle_vcr", "zip", "register_startup"]
 
     def initialize_options(self):
-        # get py2exe's command options
-        options = dict(self.distribution.command_options.get("py2exe", {}))
-        options.update(self.distribution.command_options.get("innosetup", {}))
-        self.distribution.command_options["innosetup"] = options
-
-        py2exe.initialize_options(self)
-        self.inno_setup_exe = ""
-        self.inno_script = ""
+        """Initialize command options."""
+        self.inno_setup_exe = None
+        self.inno_script = DEFAULT_ISS
         self.extra_inno_script = None
         self.certificate_file = None
         self.certificate_password = None
         self.extra_sign = []
-        self.bundle_vcr = True
+        self.bundle_vcr = False  # Default to False for modern Python
         self.zip = False
         self.register_startup = False
-        self.fileinfo = {}
-        self.modules = {}
+        self.dist_dir = None
+        
+    def finalize_options(self):
+        """Finalize command options."""
+        self.set_undefined_options('bdist', ('dist_dir', 'dist_dir'))
+        if self.dist_dir is None:
+            self.dist_dir = "dist"
+            
+        # Convert string options to appropriate types
+        if isinstance(self.zip, str) and self.zip.lower() in ('0', 'false', 'no'):
+            self.zip = False
+        elif isinstance(self.zip, str) and self.zip.lower() in ('1', 'true', 'yes'):
+            self.zip = True
+            
+        if isinstance(self.bundle_vcr, str) and self.bundle_vcr.lower() in ('0', 'false', 'no'):
+            self.bundle_vcr = False
+        elif isinstance(self.bundle_vcr, str) and self.bundle_vcr.lower() in ('1', 'true', 'yes'):
+            self.bundle_vcr = True
+            
+        if isinstance(self.register_startup, str) and self.register_startup.lower() in ('0', 'false', 'no'):
+            self.register_startup = False
+        elif isinstance(self.register_startup, str) and self.register_startup.lower() in ('1', 'true', 'yes'):
+            self.register_startup = True
+            
+        # Ensure extra_sign is a list
+        if isinstance(self.extra_sign, str):
+            self.extra_sign = [self.extra_sign]
 
-    def build_service(self, target, template, arcname):
-        result = py2exe.build_service(self, target, template, arcname)
-        self.fileinfo.setdefault(result, {})["cmdline_style"] = getattr(
-            target, "cmdline_style", "py2exe"
-        )
-        return result
+    def _find_inno_setup(self):
+        """Find the Inno Setup compiler."""
+        if self.inno_setup_exe and os.path.isfile(self.inno_setup_exe):
+            return self.inno_setup_exe
+            
+        # Try registry (prefer 64-bit view first)
+        keys_to_try = [
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1", winreg.KEY_READ | winreg.KEY_WOW64_64KEY),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1", winreg.KEY_READ | winreg.KEY_WOW64_32KEY),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1", winreg.KEY_READ | winreg.KEY_WOW64_64KEY),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1", winreg.KEY_READ | winreg.KEY_WOW64_32KEY),
+        ]
+        
+        for root, key, flags in keys_to_try:
+            try:
+                with winreg.OpenKey(root, key, 0, flags) as handle:
+                    install_location, _ = winreg.QueryValueEx(handle, "InstallLocation")
+                    if install_location:
+                        iscc_path = os.path.join(install_location, "ISCC.exe")
+                        if os.path.isfile(iscc_path):
+                            return iscc_path
+            except OSError:
+                continue
 
-    def plat_finalize(self, modules, py_files, extensions, dlls):
-        py2exe.plat_finalize(self, modules, py_files, extensions, dlls)
-        self.modules = modules
+        # Try default Program Files locations
+        for pf_var in ["ProgramFiles", "ProgramFiles(x86)"]:
+            pf_path = os.environ.get(pf_var)
+            if pf_path:
+                iscc_path = os.path.join(pf_path, "Inno Setup 6", "ISCC.exe")
+                if os.path.isfile(iscc_path):
+                    return iscc_path
+                    
+        return None  # Not found
 
     def run(self):
-        script = InnoScript(self)
-        if not os.path.exists(script.innoexepath):
+        """Run the command: build the installer."""
+        # First, run py2exe to create the executable
+        self.run_command('py2exe')
+        py2exe_cmd = self.get_finalized_command('py2exe')
+        
+        # Find Inno Setup
+        inno_exe_path = self._find_inno_setup()
+        if not inno_exe_path:
             raise EnvironmentError(
-                "Please install InnoSetup before attempting to build an installer."
+                "Could not find Inno Setup 6 compiler (ISCC.exe). "
+                "Please install Inno Setup 6 or specify the path using --inno-setup-exe."
             )
-        py2exe.run(self)
+        print(f"Using Inno Setup compiler: {inno_exe_path}")
+        
+        # Prepare the Inno Setup script
+        inno_script_content = ""
+        if self.inno_script and os.path.isfile(self.inno_script):
+            with open(self.inno_script, 'r', encoding='utf-8') as f:
+                inno_script_content = f.read()
+        elif self.inno_script:  # Assume it's a string
+            inno_script_content = self.inno_script
+        else:
+            inno_script_content = DEFAULT_ISS  # Use default if none provided
+            
+        if self.extra_inno_script:
+            inno_script_content += f"\n{self.extra_inno_script}"
+            
+        # Create the InnoScript instance
+        script = InnoScript(
+            dist_dir=self.dist_dir,
+            metadata=self.distribution.metadata,
+            inno_script=inno_script_content,
+            inno_setup_exe=inno_exe_path,
+            bundle_vcr=self.bundle_vcr,
+            register_startup=self.register_startup,
+            zip_option=self.zip,
+            extra_inno_script=self.extra_inno_script
+        )
+        
+        # Sign executables if requested
         if self.certificate_file:
             self.sign_executables()
-        compath = os.path.join("dist", "win32com", "gen_py")
-        if os.path.isdir(compath):
-            shutil.rmtree(compath)
+            
+        # Create and compile the script
         print("*** creating the inno setup script ***")
         script.create()
         print("*** compiling the inno setup script ***")
-        script.compile_script()
+        setup_file = script.compile_script()
+        
+        # Sign the installer if requested
         if self.certificate_file:
-            self.sign_executable(script.setup_file_path)
+            self.sign_executable(setup_file)
 
     def sign_executables(self):
-        for executable in self.distribution.windows:
-            exepath = os.path.join(
-                "dist", "{base}.exe".format(base=executable.get_dest_base())
-            )
-            self.sign_executable(exepath)
-        if not self.extra_sign:
-            return
-        for extra in self.extra_sign:
-            self.sign_executable(os.path.join("dist", extra))
+        """Sign all executables in the dist directory."""
+        # Find all executables in the dist directory
+        for root, _, files in os.walk(self.dist_dir):
+            for file in files:
+                if file.lower().endswith('.exe'):
+                    self.sign_executable(os.path.join(root, file))
+                    
+        # Sign any extra files specified
+        if self.extra_sign:
+            for extra in self.extra_sign:
+                self.sign_executable(os.path.join(self.dist_dir, extra))
 
     def sign_executable(self, exepath):
+        """Sign a single executable."""
+        if not os.path.exists(exepath):
+            self.warn(f"File to sign not found: {exepath}")
+            return
+            
         url = self.distribution.get_url()
-        signtool.sign(
-            exepath,
-            url=url,
-            certificate_file=self.certificate_file,
-            certificate_password=self.certificate_password,
-        )
+        try:
+            signtool.sign(
+                exepath,
+                url=url,
+                certificate_file=self.certificate_file,
+                certificate_password=self.certificate_password,
+            )
+            print(f"Signed: {exepath}")
+        except Exception as e:
+            self.warn(f"Failed to sign {exepath}: {e}")
 
 
-#
-# register command
-#
-
+# Register the command with distutils
 distutils.command.__all__.append("innosetup")
 sys.modules["distutils.command.innosetup"] = sys.modules[__name__]
-
-
-#
-# fix a problem py2exe.mf misses some modules
-#
-
-
-class PackagePathMap(object):
-    def get(self, name, default=None):
-        try:
-            return packagePathMap[name]
-        except LookupError:
-            pass
-        # path from Python import system
-        try:
-            names = name.split(".")
-            for i in range(len(names)):
-                modname = ".".join(names[: i + 1])
-                __import__(modname)
-            return getattr(sys.modules[name], "__path__", [])[1:]
-        except Exception as e:
-            print(e)
-            pass
-        return default
-
-    def __setitem__(self, name, value):
-        packagePathMap[name] = value
-
-
-modulefinder.packagePathMap = PackagePathMap()
-
-EXCLUDED_DLLS = (
-    "advapi32.dll",
-    "comctl32.dll",
-    "comdlg32.dll",
-    "crtdll.dll",
-    "gdi32.dll",
-    "glu32.dll",
-    "opengl32.dll",
-    "imm32.dll",
-    "kernel32.dll",
-    "mfc42.dll",
-    "msvcirt.dll",
-    "msvcrt.dll",
-    "msvcrtd.dll",
-    "ntdll.dll",
-    "odbc32.dll",
-    "ole32.dll",
-    "oleaut32.dll",
-    "rpcrt4.dll",
-    "shell32.dll",
-    "shlwapi.dll",
-    "user32.dll",
-    "version.dll",
-    "winmm.dll",
-    "winspool.drv",
-    "ws2_32.dll",
-    "ws2help.dll",
-    "wsock32.dll",
-    "netapi32.dll",
-    "gdiplus.dll",
-)
-
-
-# XXX Perhaps it would be better to assume dlls from the systemdir are system dlls,
-# and make some exceptions for known dlls, like msvcr71, pythonXY.dll, and so on?
-def _isSystemDLL(pathname):
-    if os.path.basename(pathname).lower() in ("msvcr71.dll", "msvcr71d.dll"):
-        return 0
-    if os.path.basename(pathname).lower() in EXCLUDED_DLLS:
-        return 1
-    # How can we determine whether a dll is a 'SYSTEM DLL'?
-    # Is it sufficient to use the Image Load Address?
-    import struct
-
-    file = open(pathname, "rb")
-    if file.read(2) != "MZ":
-        raise Exception("Seems not to be an exe-file")
-    file.seek(0x3C)
-    pe_ofs = struct.unpack("i", file.read(4))[0]
-    file.seek(pe_ofs)
-    if file.read(4) != "PE\000\000":
-        raise Exception("Seems not to be an exe-file", pathname)
-    # COFF File Header, offset of ImageBase in Optional Header
-    file.read(20 + 28)
-    imagebase = struct.unpack("I", file.read(4))[0]
-    return not (imagebase < 0x70000000)
-
-
-#
-# fix a problem that `py2exe` includes MinWin's ApiSet Stub DLLs on Windows 7.
-#
-# http://www.avertlabs.com/research/blog/index.php/2010/01/05/windows-7-kernel-api-refactoring/
-if sys.getwindowsversion()[:2] >= (6, 1):
-    build_exe._isSystemDLL = _isSystemDLL
-
-    def isSystemDLL(pathname):
-        if "msvc" in pathname.lower():
-            return False
-        if _isSystemDLL(pathname):
-            return True
-        try:
-            language = win32api.GetFileVersionInfo(
-                pathname, "\\VarFileInfo\\Translation"
-            )
-            company = win32api.GetFileVersionInfo(
-                pathname, "\\StringFileInfo\\%.4x%.4x\\CompanyName" % language[0]
-            )
-            if company.lower() == "microsoft corporation":
-                return True
-        except Exception:
-            pass
-        return False
-
-    build_exe.isSystemDLL = isSystemDLL
 
 
 if __name__ == "__main__":
