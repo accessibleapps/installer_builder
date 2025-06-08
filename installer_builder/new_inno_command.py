@@ -94,13 +94,20 @@ class NewInnoSetupCommand(distutils.core.Command):
         # Create installer config from distribution metadata
         installer_config = create_installer_config(self, self.dist_dir)
         
-        # Build the installer
+        # Create compiler and generate ISS content
         compiler = InnosetupCompiler()
-        output_name = f"{installer_config.app_name}-{installer_config.app_version}-setup.exe"
-        output_path = os.path.join(self.dist_dir, output_name)
+        iss_content = installer_config.render(compiler)
         
-        compiler.build(installer_config, output_path)
-        print(f"Created installer: {output_path}")
+        # Write ISS file
+        iss_path = os.path.join(self.dist_dir, "setup.iss")
+        with open(iss_path, "w", encoding="utf-8") as f:
+            f.write(iss_content)
+        
+        # Compile the installer
+        compiler.compile(iss_path)
+        
+        output_name = f"{installer_config.app_name}-{installer_config.app_version}-setup.exe"
+        print(f"Created installer: {output_name}")
     
     def _sign_executables(self):
         """Sign all executables in dist directory"""
