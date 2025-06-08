@@ -4,10 +4,10 @@ import os
 from installer_builder import __version__
 
 
-install_requires = ['setuptools']
+install_requires = ['setuptools', 'innosetup_builder']
 if sys.platform == 'win32':
  if int(sys.version[0]) < 3:
-  install_requires .extend(['py2exe_py2', 'pywin32'])
+  install_requires .extend(['py2exe', 'pywin32'])
  else:
   install_requires .extend(['py2exe', 'pywin32'])
 
