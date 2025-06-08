@@ -1,5 +1,6 @@
 import distutils.core
 import os
+import pathlib
 import platform
 
 # Only import Windows-specific modules on Windows
@@ -11,37 +12,29 @@ else:
 
 def create_installer_config(builder_instance, dist_dir):
     """Convert InstallerBuilder config to innosetup_builder.Installer"""
-    from innosetup_builder import Installer, FileEntry, RegistryEntry, all_files
+    import innosetup_builder
     
-    # Get main executable name
-    main_exe = f"{builder_instance.name}.exe"
-    
-    # Scan py2exe output directory  
-    files = list(all_files(dist_dir))
+    # Get main executable name and path
+    main_exe = f"{builder_instance.distribution.metadata.name}.exe"
+    main_executable_path = pathlib.Path(dist_dir) / main_exe
     
     # Create installer config
-    installer = Installer(
-        app_name=builder_instance.name,
-        app_version=builder_instance.version,
-        author=builder_instance.author or "",
-        main_executable=main_exe,
-        files=files,
-        run_at_startup=builder_instance.register_startup,
-        extra_iss=builder_instance.extra_inno_script or ""
-    )
+    installer = innosetup_builder.Installer()
+    installer.app_name = builder_instance.distribution.metadata.name
+    installer.files = innosetup_builder.all_files(dist_dir)
+    installer.app_version = builder_instance.distribution.metadata.version
+    installer.author = builder_instance.distribution.metadata.author or ""
+    installer.main_executable = main_executable_path
+    installer.app_short_description = builder_instance.distribution.metadata.description or ""
+    installer.run_at_startup = builder_instance.register_startup
     
-    # Add startup registry entry if needed
-    if builder_instance.register_startup:
-        installer.registry_entries.append(
-            RegistryEntry(
-                root="HKCU", 
-                subkey="Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-                value_type="string",
-                value_name=builder_instance.name,
-                value_data=f"{{app}}\\{main_exe}",
-                flags="uninsdeletevalue"
-            )
-        )
+    # Set output filename
+    installer_filename = "-".join([
+        installer.app_name, 
+        installer.app_version, 
+        'setup'
+    ])
+    installer.output_base_filename = installer_filename
     
     return installer
 
@@ -89,22 +82,14 @@ class NewInnoSetupCommand(distutils.core.Command):
             self._sign_installer()
     
     def _create_installer(self):
-        from innosetup_builder import InnosetupCompiler
+        import innosetup_builder
         
         # Create installer config from distribution metadata
         installer_config = create_installer_config(self, self.dist_dir)
         
-        # Create compiler and generate ISS content
-        compiler = InnosetupCompiler()
-        iss_content = installer_config.render(compiler)
-        
-        # Write ISS file
-        iss_path = os.path.join(self.dist_dir, "setup.iss")
-        with open(iss_path, "w", encoding="utf-8") as f:
-            f.write(iss_content)
-        
-        # Compile the installer
-        compiler.compile(iss_path)
+        # Create compiler and build installer
+        innosetup_compiler = innosetup_builder.InnosetupCompiler()
+        innosetup_compiler.build(installer_config, self.dist_dir)
         
         output_name = f"{installer_config.app_name}-{installer_config.app_version}-setup.exe"
         print(f"Created installer: {output_name}")

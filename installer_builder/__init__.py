@@ -397,7 +397,10 @@ class InstallerBuilder(object):
                     "copyright": self.get_copyright(),
                 }
             ],
-            "cmdclass": {self.build_command: self.get_command_class()},
+            "cmdclass": {
+                self.build_command: self.get_command_class(),
+                "innosetup": self.get_command_class()  # Also register as innosetup for backward compatibility
+            },
         }
         if is_mac:
             setup_arguments["app"] = [self.main_module]
