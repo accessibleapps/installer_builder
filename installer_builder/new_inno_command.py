@@ -1,6 +1,12 @@
 import distutils.core
 import os
-from . import signtool
+import platform
+
+# Only import Windows-specific modules on Windows
+if platform.system() == "Windows":
+    from . import signtool
+else:
+    signtool = None
 
 
 def create_installer_config(builder_instance, dist_dir):
@@ -118,6 +124,10 @@ class NewInnoSetupCommand(distutils.core.Command):
     def _sign_file(self, filepath):
         """Sign a single file"""
         if not os.path.exists(filepath):
+            return
+            
+        if signtool is None:
+            print(f"Warning: Signing not available on {platform.system()}")
             return
             
         try:
