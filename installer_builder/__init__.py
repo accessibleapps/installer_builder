@@ -295,9 +295,8 @@ class InstallerBuilder(object):
 
     def get_command_class(self):
         if platform.system() == "Windows":
-            from .innosetup import innosetup
-
-            return innosetup
+            from .new_inno_command import NewInnoSetupCommand
+            return NewInnoSetupCommand
         elif platform.system() == "Darwin":
             import py2app.build_app
 
