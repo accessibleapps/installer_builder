@@ -268,8 +268,7 @@ MANIFEST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     </dependency>
     <application xmlns="urn:schemas-microsoft-com:asm.v3">
         <windowsSettings>
-            <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
-            <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+            <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
         </windowsSettings>
     </application>
 </assembly>"""
@@ -653,11 +652,11 @@ class InnoScript(object):
             return []  # Yield nothing for modern Python
             
         # This is legacy code for older Python versions
-        import distutils.msvccompiler
         try:
+            import distutils.msvccompiler
             msvc_ver = distutils.msvccompiler.get_build_version()
-        except AttributeError:
-            # Modern Python doesn't expose this
+        except (ImportError, AttributeError):
+            # Modern Python doesn't expose this or distutils.msvccompiler doesn't exist
             return []
             
         files_to_include = []
