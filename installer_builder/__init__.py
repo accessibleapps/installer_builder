@@ -142,34 +142,29 @@ class InstallerBuilder(object):
             result.append("jinja2.asyncsupport")
         return result
 
-    def _should_finalize_build(self):
-        """Check if we should finalize the build based on whether an installer was created"""
-        # Check if we're running a full installer build command
-        if sys.argv and len(sys.argv) > 1:
-            command = sys.argv[1]
-            # Only finalize for complete installer builds, not individual commands
-            if command in ('py2exe', 'py2app', 'build', 'build_exe'):
-                return False
-        
-        # Check if installer file exists (the main indicator of a successful complete build)
-        try:
-            installer_path = self.find_created_installer()
-            return os.path.exists(installer_path)
-        except RuntimeError:
-            # If installer doesn't exist, we shouldn't finalize
-            return False
-
     def build(self, skip_finalize=False):
         self.build_start_time = time.time()
         self.prebuild_message()
         self.remove_previous_build()
         self.build_installer()
-        if not skip_finalize and self._should_finalize_build():
+        
+        # Check if installer was actually created after running build_installer
+        if not skip_finalize and self._installer_was_created():
             self.finalize_build()
             self.perform_postbuild_commands()
             self.report_build_statistics()
         else:
-            print("Skipping finalization - this was not a complete installer build")
+            print("Skipping finalization - no installer was created (py2exe/py2app only)")
+            self.report_build_time()
+
+    def _installer_was_created(self):
+        """Check if an installer file was actually created by the build process"""
+        try:
+            installer_path = self.find_created_installer()
+            return os.path.exists(installer_path)
+        except RuntimeError:
+            # If installer doesn't exist, no installer was created
+            return False
 
     def prebuild_message(self):
         print("Installer builder version %s" % __version__)
