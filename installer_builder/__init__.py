@@ -142,14 +142,34 @@ class InstallerBuilder(object):
             result.append("jinja2.asyncsupport")
         return result
 
-    def build(self):
+    def _should_finalize_build(self):
+        """Check if we should finalize the build based on whether an installer was created"""
+        # Check if we're running a full installer build command
+        if sys.argv and len(sys.argv) > 1:
+            command = sys.argv[1]
+            # Only finalize for complete installer builds, not individual commands
+            if command in ('py2exe', 'py2app', 'build', 'build_exe'):
+                return False
+        
+        # Check if installer file exists (the main indicator of a successful complete build)
+        try:
+            installer_path = self.find_created_installer()
+            return os.path.exists(installer_path)
+        except RuntimeError:
+            # If installer doesn't exist, we shouldn't finalize
+            return False
+
+    def build(self, skip_finalize=False):
         self.build_start_time = time.time()
         self.prebuild_message()
         self.remove_previous_build()
         self.build_installer()
-        self.finalize_build()
-        self.perform_postbuild_commands()
-        self.report_build_statistics()
+        if not skip_finalize and self._should_finalize_build():
+            self.finalize_build()
+            self.perform_postbuild_commands()
+            self.report_build_statistics()
+        else:
+            print("Skipping finalization - this was not a complete installer build")
 
     def prebuild_message(self):
         print("Installer builder version %s" % __version__)
@@ -234,7 +254,14 @@ class InstallerBuilder(object):
             self.shrink_mac_binaries()
             self.lipo_file(os.path.join(self.get_app_path(), self.name))
             self.create_dmg()
-        self.move_output()
+        
+        # Only move output if installer was created
+        try:
+            self.move_output()
+        except RuntimeError as e:
+            print("Warning: Could not move installer output: %s" % e)
+            return
+            
         if self.create_update:
             self.create_update_archive()
 
@@ -260,7 +287,8 @@ class InstallerBuilder(object):
         )
 
     def move_output(self):
-        os.mkdir(self.output_directory)
+        if not os.path.exists(self.output_directory):
+            os.mkdir(self.output_directory)
         destination = os.path.join(self.output_directory, self.installer_filename())
         os.rename(self.find_created_installer(), destination)
         print("Moved generated installer to %s" % destination)
@@ -292,6 +320,9 @@ class InstallerBuilder(object):
             return "%s-%s-setup.exe" % (self.name, self.version)
         elif platform.system() == "Darwin":
             return "%s-%s.dmg" % (self.name, self.version)
+        else:
+            # Fallback for other systems
+            return "%s-%s-installer" % (self.name, self.version)
 
     def get_command_class(self):
         if platform.system() == "Windows":
@@ -313,11 +344,15 @@ class InstallerBuilder(object):
         subprocess.check_call([command], shell=True)
 
     def report_build_statistics(self):
-        print("Generated installer filename: %s" % self.find_created_installer())
-        print(
-            "Generated installer filesize: %s"
-            % format_filesize(os.stat(self.find_created_installer()).st_size)
-        )
+        try:
+            installer_path = self.find_created_installer()
+            print("Generated installer filename: %s" % installer_path)
+            print(
+                "Generated installer filesize: %s"
+                % format_filesize(os.stat(installer_path).st_size)
+            )
+        except RuntimeError:
+            print("Build completed - no installer created (py2exe/py2app only)")
         self.report_build_time()
 
     def shrink_mac_binaries(self):
