@@ -24,7 +24,7 @@ def create_installer_config(builder_instance, dist_dir):
     installer.files = innosetup_builder.all_files(dist_dir)
     installer.app_version = builder_instance.distribution.metadata.version
     installer.author = builder_instance.distribution.metadata.author or ""
-    installer.main_executable = main_executable_path
+    installer.main_executable = main_exe
     installer.app_short_description = builder_instance.distribution.metadata.description or ""
     installer.run_at_startup = builder_instance.register_startup
     
