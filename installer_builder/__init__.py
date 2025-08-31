@@ -137,8 +137,7 @@ class InstallerBuilder(object):
 
     def get_version_specific_excludes(self):
         result = []
-        version = float("%d.%d" %
-                        (sys.version_info.major, sys.version_info.minor))
+        version = float("%d.%d" % (sys.version_info.major, sys.version_info.minor))
         if version < 3.5:
             result.append("jinja2.asyncsupport")
         return result
@@ -155,7 +154,9 @@ class InstallerBuilder(object):
             self.perform_postbuild_commands()
             self.report_build_statistics()
         else:
-            print("Skipping finalization - no installer was created (py2exe/py2app only)")
+            print(
+                "Skipping finalization - no installer was created (py2exe/py2app only)"
+            )
             self.report_build_time()
 
     def _installer_was_created(self):
@@ -193,14 +194,12 @@ class InstallerBuilder(object):
                 pkg_datafile_function = pkg.find_datafiles
             pkg_datafiles = pkg_datafile_function()
             datafiles.extend(pkg_datafiles)
-            print("Added %d datafiles from package %s" %
-                  (len(pkg_datafiles), package))
+            print("Added %d datafiles from package %s" % (len(pkg_datafiles), package))
 
         if self.has_translations:
             app_lang_data = list(self.find_application_language_data())
             datafiles.extend(app_lang_data)
-            print("Added %d application language datafiles" %
-                  len(app_lang_data))
+            print("Added %d application language datafiles" % len(app_lang_data))
 
             babel_data = list(self.find_babel_datafiles())
             datafiles.extend(babel_data)
@@ -228,8 +227,7 @@ class InstallerBuilder(object):
         return (
             (
                 "locale-data",
-                glob.glob(os.path.join(babel.__path__[
-                          0], "locale-data", "*.*")),
+                glob.glob(os.path.join(babel.__path__[0], "locale-data", "*.*")),
             ),
         )
 
@@ -242,8 +240,7 @@ class InstallerBuilder(object):
                     files.append(path)
             if files:
                 directory = os.path.join(
-                    self.locale_dir, os.path.relpath(
-                        dirpath, start=locale_path)
+                    self.locale_dir, os.path.relpath(dirpath, start=locale_path)
                 )
                 yield directory, files
 
@@ -289,8 +286,7 @@ class InstallerBuilder(object):
     def move_output(self):
         if not os.path.exists(self.output_directory):
             os.mkdir(self.output_directory)
-        destination = os.path.join(
-            self.output_directory, self.installer_filename())
+        destination = os.path.join(self.output_directory, self.installer_filename())
         os.rename(self.find_created_installer(), destination)
         print("Moved generated installer to %s" % destination)
 
@@ -311,8 +307,7 @@ class InstallerBuilder(object):
     def find_created_installer(self):
         res = os.path.join("dist", self.installer_filename())
         if not os.path.exists(res):
-            res = os.path.join(self.output_directory,
-                               self.installer_filename())
+            res = os.path.join(self.output_directory, self.installer_filename())
             if not os.path.exists(res):
                 raise RuntimeError("Installer %s does not exist" % res)
         return res
@@ -329,6 +324,7 @@ class InstallerBuilder(object):
     def get_command_class(self):
         if platform.system() == "Windows":
             from .new_inno_command import NewInnoSetupCommand
+
             return NewInnoSetupCommand
         elif platform.system() == "Darwin":
             import py2app.build_app
@@ -338,8 +334,7 @@ class InstallerBuilder(object):
     def perform_postbuild_commands(self):
         if not self.postbuild_commands[platform.system().lower()]:
             return
-        print("Performing postbuild commands for platform %s" %
-              platform.system())
+        print("Performing postbuild commands for platform %s" % platform.system())
         for command in self.postbuild_commands[platform.system().lower()]:
             self.execute_command(command)
 
@@ -367,8 +362,7 @@ class InstallerBuilder(object):
                     self.lipo_file(path)
 
     def lipo_file(self, filename):
-        self.execute_command("lipo -thin i386 %s -output %s" %
-                             (filename, filename))
+        self.execute_command("lipo -thin i386 %s -output %s" % (filename, filename))
         print("Lipoed file %s" % filename)
 
     def report_build_time(self):
@@ -439,7 +433,7 @@ class InstallerBuilder(object):
             "cmdclass": {
                 self.build_command: self.get_command_class(),
                 # Also register as innosetup for backward compatibility
-                "innosetup": self.get_command_class()
+                "innosetup": self.get_command_class(),
             },
         }
         if is_mac:
@@ -470,6 +464,10 @@ class AppInstallerBuilder(InstallerBuilder):
         includes = kwargs.get("includes", [])
         has_translations = kwargs.get("has_translations", False)
         if has_translations:
+            if is_windows:
+                import py2exe.hooks
+
+                py2exe.hooks.hook_babel_localedata = lambda finder, module: None
             includes.append("babel.plural")
         extra_packages = kwargs.get("extra_packages", [])
         localized_packages = kwargs.get("localized_packages", [])
@@ -480,8 +478,7 @@ class AppInstallerBuilder(InstallerBuilder):
             datafiles.extend([("", [config_spec])])
         import babel
 
-        datafiles.extend(
-            [("babel", [os.path.join(babel.__path__[0], "global.dat")])])
+        datafiles.extend([("babel", [os.path.join(babel.__path__[0], "global.dat")])])
         from certifi import __file__ as cert_path
 
         datafiles.extend(
@@ -509,8 +506,7 @@ class AppInstallerBuilder(InstallerBuilder):
             localized_packages.append("wx")
             localized_packages.append("app_elements")
             if isinstance(application.main_window_class, str):
-                includes.append(
-                    ".".join(application.main_window_class.split(".")[:-1]))
+                includes.append(".".join(application.main_window_class.split(".")[:-1]))
         kwargs["localized_packages"] = localized_packages
         kwargs["includes"] = includes
         kwargs["extra_files_to_sign"] = files_to_sign
@@ -597,8 +593,7 @@ def get_datafiles(directory="share", match="*", target_path=None):
     .. todo:: exclude pattern
     """
     print(
-        "Searching for datafiles in directory: %s with pattern: %s" % (
-            directory, match)
+        "Searching for datafiles in directory: %s with pattern: %s" % (directory, match)
     )
     ppath = os.path.split(os.path.abspath(sys.executable))[0]
     site_packages = os.path.join(ppath, "lib", "site-packages", "")
@@ -609,8 +604,7 @@ def get_datafiles(directory="share", match="*", target_path=None):
         target_path = root.replace(site_packages, "")
         matched_files = fnmatch.filter(filenames, match)
         if matched_files:
-            print("  Found %d matching files in %s" %
-                  (len(matched_files), root))
+            print("  Found %d matching files in %s" % (len(matched_files), root))
 
         for filename in matched_files:
             matches.append(os.path.join(root, filename))
@@ -618,8 +612,7 @@ def get_datafiles(directory="share", match="*", target_path=None):
             datafiles.append((target_path, [this_filename]))
 
     print(
-        "Total files found matching '%s' in %s: %d" % (
-            match, directory, len(datafiles))
+        "Total files found matching '%s' in %s: %d" % (match, directory, len(datafiles))
     )
     return datafiles
 
