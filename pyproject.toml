@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "installer_builder"
-version = "1.5.5"
+version = "1.6.0"
 authors = [
     {name = "Christopher Toth", email = "q@q-continuum.net"},
 ]
