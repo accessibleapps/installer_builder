@@ -110,25 +110,20 @@ class NewInnoSetupCommand(distutils.core.Command):
         """Sign the created installer"""
         installer_name = f"{self.distribution.metadata.name}-{self.distribution.metadata.version}-setup.exe"
         installer_path = os.path.join(self.dist_dir, installer_name)
-        if os.path.exists(installer_path):
-            self._sign_file(installer_path)
+        self._sign_file(installer_path)
     
     def _sign_file(self, filepath):
         """Sign a single file"""
         if not os.path.exists(filepath):
-            return
-            
+            raise FileNotFoundError(f"File to sign not found: {filepath}")
+
         if signtool is None:
-            print(f"Warning: Signing not available on {platform.system()}")
-            return
-            
-        try:
-            signtool.sign(
-                filepath,
-                url=self.distribution.get_url(),
-                certificate_file=self.certificate_file,
-                certificate_password=self.certificate_password,
-            )
-            print(f"Signed: {os.path.basename(filepath)}")
-        except Exception as e:
-            print(f"Warning: Failed to sign {filepath}: {e}")
+            raise RuntimeError(f"Signing not available on {platform.system()}")
+
+        signtool.sign(
+            filepath,
+            url=self.distribution.get_url(),
+            certificate_file=self.certificate_file,
+            certificate_password=self.certificate_password,
+        )
+        print(f"Signed: {os.path.basename(filepath)}")

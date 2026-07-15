@@ -1252,20 +1252,16 @@ class innosetup(distutils.core.Command):
     def sign_executable(self, exepath):
         """Sign a single executable."""
         if not os.path.exists(exepath):
-            self.warn(f"File to sign not found: {exepath}")
-            return
-            
+            raise FileNotFoundError(f"File to sign not found: {exepath}")
+
         url = self.distribution.get_url()
-        try:
-            signtool.sign(
-                exepath,
-                url=url,
-                certificate_file=self.certificate_file,
-                certificate_password=self.certificate_password,
-            )
-            print(f"Signed: {exepath}")
-        except Exception as e:
-            self.warn(f"Failed to sign {exepath}: {e}")
+        signtool.sign(
+            exepath,
+            url=url,
+            certificate_file=self.certificate_file,
+            certificate_password=self.certificate_password,
+        )
+        print(f"Signed: {exepath}")
 
 
 # Register the command with distutils
