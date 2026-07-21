@@ -80,27 +80,32 @@ class TestInnoSetupIntegration:
         assert cmd.dist_dir is None
         assert isinstance(cmd.extra_sign, list)
 
-    def test_create_installer_config_function_exists(self):
-        """Test that create_installer_config function exists and is callable."""
+    def test_create_installer_config_uses_distribution_metadata(self, tmp_path):
+        """Build installer metadata from the command's Distribution."""
         from installer_builder.new_inno_command import create_installer_config
-        
+
         assert callable(create_installer_config)
-        
-        # Test function signature by checking it doesn't crash with mock args
-        # (actual functionality requires innosetup_builder which may not be installed)
+
+        distribution = Distribution(
+            {
+                "name": "TestApp",
+                "version": "1.0.0",
+                "author": "Test Author",
+                "description": "Test Description",
+            }
+        )
         builder_mock = Mock()
-        builder_mock.name = "TestApp"
-        builder_mock.version = "1.0.0"
-        builder_mock.author = "Test Author"
+        builder_mock.distribution = distribution
         builder_mock.register_startup = False
-        builder_mock.extra_inno_script = None
-        
-        # This will fail if innosetup_builder isn't installed, which is expected
-        try:
-            create_installer_config(builder_mock, "/test/dist")
-        except ImportError:
-            # Expected when innosetup_builder is not installed
-            pass
+
+        installer = create_installer_config(builder_mock, str(tmp_path))
+
+        assert installer.app_name == "TestApp"
+        assert installer.app_version == "1.0.0"
+        assert installer.author == "Test Author"
+        assert installer.app_short_description == "Test Description"
+        assert installer.main_executable == "TestApp.exe"
+        assert installer.output_base_filename == "TestApp-1.0.0-setup"
 
 
 def test_requested_signing_routes_executable_and_bootstrapper():
