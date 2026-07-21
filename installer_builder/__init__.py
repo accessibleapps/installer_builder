@@ -209,17 +209,117 @@ class InstallerBuilder(object):
             pkg = importlib.import_module(package)
             path = pkg.__path__[0]
             locale_path = os.path.join(path, self.locale_dir)
+            domains = self._validate_translation_inventory(locale_path)
             files = list(self.find_locale_data(locale_path))
             datafiles.extend(files)
-            print("Added %d locale datafiles for %s" % (len(files), package))
+            print(
+                "Added %d locale datafiles for %s; translation domains: %s"
+                % (len(files), package, ", ".join(domains))
+            )
 
         total_datafiles = len(self.datafiles) + len(datafiles)
         print("Total datafiles to be included: %d" % total_datafiles)
         return self.datafiles + datafiles
 
     def find_application_language_data(self):
+        self._validate_translation_inventory(
+            self.locale_dir, expected_domain=self.name
+        )
         for directory, filenames in self.find_locale_data(self.locale_dir):
             yield directory, filenames
+
+    def _validate_translation_inventory(self, locale_path, expected_domain=None):
+        application_mode = expected_domain is not None
+        catalog_extensions = (".po", ".mo") if application_mode else (".mo",)
+        catalogs = []
+
+        for dirpath, dirnames, filenames in os.walk(locale_path):
+            dirnames.sort()
+            for filename in sorted(filenames):
+                stem, extension = os.path.splitext(filename)
+                extension = extension.lower()
+                if extension not in catalog_extensions:
+                    continue
+
+                path = os.path.join(dirpath, filename)
+                if filename.startswith("._"):
+                    raise ValueError(
+                        "Invalid translation catalog metadata: %s; "
+                        "AppleDouble files are not translation catalogs" % path
+                    )
+
+                relative_path = os.path.relpath(path, start=locale_path)
+                path_parts = relative_path.split(os.sep)
+                valid_layout = (
+                    len(path_parts) == 3
+                    and path_parts[0] not in ("", ".")
+                    and path_parts[1] in ("LC_MESSAGES", "lc_messages")
+                )
+                if not valid_layout:
+                    if application_mode:
+                        expected_layout = (
+                            "<locale>/(LC_MESSAGES|lc_messages)/<domain>.po or .mo"
+                        )
+                    else:
+                        expected_layout = (
+                            "<locale>/(LC_MESSAGES|lc_messages)/<domain>.mo"
+                        )
+                    raise ValueError(
+                        "Invalid translation catalog layout: %s; expected %s"
+                        % (path, expected_layout)
+                    )
+
+                catalogs.append((path, dirpath, stem, extension))
+
+        if application_mode:
+            unexpected_domains = sorted(
+                {stem for _, _, stem, _ in catalogs if stem != expected_domain}
+            )
+            if unexpected_domains:
+                found_domain = unexpected_domains[0]
+                catalog_directory = min(
+                    directory
+                    for _, directory, stem, _ in catalogs
+                    if stem == found_domain
+                )
+                raise ValueError(
+                    "Translation domain mismatch in %s: expected %r, found %r"
+                    % (catalog_directory, expected_domain, found_domain)
+                )
+
+            inventory = {}
+            for _, directory, stem, extension in catalogs:
+                inventory.setdefault((directory, stem), set()).add(extension)
+
+            for directory, stem in sorted(inventory):
+                if ".po" in inventory[(directory, stem)] and ".mo" not in inventory[
+                    (directory, stem)
+                ]:
+                    expected_mo_path = os.path.join(directory, stem + ".mo")
+                    raise FileNotFoundError(
+                        "Compiled translation catalog not found: %s"
+                        % expected_mo_path
+                    )
+
+            for directory, stem in sorted(inventory):
+                if ".mo" in inventory[(directory, stem)] and ".po" not in inventory[
+                    (directory, stem)
+                ]:
+                    expected_po_path = os.path.join(directory, stem + ".po")
+                    raise FileNotFoundError(
+                        "Source translation catalog not found: %s" % expected_po_path
+                    )
+
+            if not catalogs:
+                raise FileNotFoundError(
+                    "No translation catalogs found in: %s" % locale_path
+                )
+        elif not catalogs:
+            raise FileNotFoundError(
+                "No compiled translation catalogs found in: %s" % locale_path
+            )
+
+        return tuple(sorted({stem for _, _, stem, extension in catalogs if extension == ".mo"}))
 
     def find_babel_datafiles(self):
         import babel
