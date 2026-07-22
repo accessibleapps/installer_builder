@@ -186,7 +186,6 @@ from xml.etree import ElementTree
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import win32api  # for read pe32 resource
-from py2exe.distutils_buildexe import py2exe
 
 # Modern py2exe uses a different approach
 import py2exe

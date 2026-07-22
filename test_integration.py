@@ -30,17 +30,9 @@ def legacy_innosetup_module(monkeypatch):
     win32api_module = types.ModuleType("win32api")
     py2exe_module = types.ModuleType("py2exe")
     py2exe_module.__path__ = []
-    distutils_buildexe_module = types.ModuleType("py2exe.distutils_buildexe")
-    distutils_buildexe_module.py2exe = object()
-    py2exe_module.distutils_buildexe = distutils_buildexe_module
 
     monkeypatch.setitem(sys.modules, "win32api", win32api_module)
     monkeypatch.setitem(sys.modules, "py2exe", py2exe_module)
-    monkeypatch.setitem(
-        sys.modules,
-        "py2exe.distutils_buildexe",
-        distutils_buildexe_module,
-    )
     monkeypatch.setattr(
         distutils.command,
         "__all__",
