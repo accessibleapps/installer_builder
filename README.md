@@ -30,6 +30,14 @@ A Python package that simplifies creating Windows and macOS installers for Pytho
 pip install installer_builder
 ```
 
+## Testing
+
+Run the tracked test suite with:
+
+```powershell
+uv run pytest
+```
+
 ## Basic Usage
 
 ```python
