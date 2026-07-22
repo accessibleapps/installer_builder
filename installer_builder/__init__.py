@@ -544,6 +544,24 @@ class InstallerBuilder(object):
             setup_arguments[self.app_type][0]["other_resources"] = (
                 innosetup.manifest(self.name),
             )
+            if "py2exe" in sys.argv[1:]:
+                import py2exe
+
+                targets = setup_arguments[self.app_type]
+                py2exe.freeze(
+                    console=targets if self.app_type == "console" else [],
+                    windows=targets if self.app_type == "windows" else [],
+                    data_files=setup_arguments["data_files"],
+                    options=setup_arguments["options"]["py2exe"],
+                    version_info={
+                        "version": self.version,
+                        "company_name": self.author,
+                        "copyright": self.get_copyright(),
+                        "product_name": self.name,
+                        "product_version": self.version,
+                    },
+                )
+                return
         setuptools.setup(**setup_arguments)
 
     def get_copyright(self):

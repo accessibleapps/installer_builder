@@ -1,9 +1,10 @@
 import sys
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
-from installer_builder import AppInstallerBuilder
+from installer_builder import AppInstallerBuilder, InstallerBuilder
 
 
 def make_application(**capabilities):
@@ -83,3 +84,36 @@ def test_gui_without_app_elements_does_not_add_its_locale_data(monkeypatch):
 
     assert builder.localized_packages == ["wx"]
     assert builder.includes == ["gui.main_window"]
+
+
+def test_py2exe_command_uses_current_freeze_api(monkeypatch):
+    freeze = Mock()
+    monkeypatch.setattr("py2exe.freeze", freeze)
+    monkeypatch.setattr(
+        "setuptools.setup",
+        lambda **kwargs: pytest.fail("py2exe must not use the removed setuptools command"),
+    )
+    monkeypatch.setattr(sys, "argv", ["setup.py", "py2exe"])
+    builder = InstallerBuilder(
+        main_module="main.pyw",
+        name="Test App",
+        version="1.0.0",
+        author="Accessible Apps",
+        datafiles=[("data", ["cards.csv"])],
+    )
+
+    builder.build_installer()
+
+    call = freeze.call_args.kwargs
+    assert call["console"] == []
+    assert call["windows"][0]["script"] == "main.pyw"
+    assert call["windows"][0]["dest_base"] == "Test App"
+    assert call["data_files"] == [("data", ["cards.csv"])]
+    assert call["options"]["bundle_files"] == 3
+    assert call["version_info"] == {
+        "version": "1.0.0",
+        "company_name": "Accessible Apps",
+        "copyright": builder.get_copyright(),
+        "product_name": "Test App",
+        "product_version": "1.0.0",
+    }
