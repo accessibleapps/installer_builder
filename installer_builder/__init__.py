@@ -585,28 +585,32 @@ class AppInstallerBuilder(InstallerBuilder):
             [("", [os.path.join(os.path.dirname(cert_path), "cacert.pem")])]
         )
         kwargs["datafiles"] = datafiles
-        if hasattr(application, "output"):
+        if getattr(application, "output", False):
             datafile_packages.append("accessible_output2")
-        if hasattr(application, "sound") or hasattr(application, "UI_sounds"):
+        if getattr(application, "sound", False) or getattr(
+            application, "UI_sounds", False
+        ):
             datafile_packages.append("sound_lib")
-        if hasattr(application, "update_endpoint"):
+        if getattr(application, "update_endpoint", False):
             datafile_packages.append("autoupdate")
             new_kwargs["create_update"] = True
             files_to_sign.append("bootstrap.exe")
         kwargs["datafile_packages"] = datafile_packages
-        includes = kwargs.get("includes", [])
-        if hasattr(application, "activation_module"):
+        activation_module = getattr(application, "activation_module", None)
+        if activation_module:
             # Because it's not picked up on OSX.
             extra_packages.append("product_key")
-            includes.append(application.activation_module)
+            includes.append(activation_module)
         kwargs["extra_packages"] = extra_packages
-        if hasattr(application, "activation_module"):
+        if activation_module:
             localized_packages.append("product_key")
-        if hasattr(application, "main_window_class"):
+        main_window_class = getattr(application, "main_window_class", None)
+        if main_window_class:
             localized_packages.append("wx")
-            localized_packages.append("app_elements")
-            if isinstance(application.main_window_class, str):
-                includes.append(".".join(application.main_window_class.split(".")[:-1]))
+            if importlib.util.find_spec("app_elements") is not None:
+                localized_packages.append("app_elements")
+            if isinstance(main_window_class, str):
+                includes.append(".".join(main_window_class.split(".")[:-1]))
         kwargs["localized_packages"] = localized_packages
         kwargs["includes"] = includes
         kwargs["extra_files_to_sign"] = files_to_sign
