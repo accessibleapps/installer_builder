@@ -262,7 +262,6 @@ def test_run_stops_before_installer_when_executable_or_bootstrapper_signing_fail
     events.sign_executables.side_effect = error
 
     with (
-        patch.object(command, "run_command", events.run_command),
         patch.object(command, "_sign_executables", events.sign_executables),
         patch.object(command, "_create_installer", events.create_installer),
         patch.object(command, "_sign_installer", events.sign_installer),
@@ -272,7 +271,6 @@ def test_run_stops_before_installer_when_executable_or_bootstrapper_signing_fail
 
     assert exc_info.value is error
     assert events.mock_calls == [
-        call.run_command("py2exe"),
         call.sign_executables(),
     ]
 
@@ -285,7 +283,6 @@ def test_run_propagates_installer_signing_failure():
     events.sign_installer.side_effect = error
 
     with (
-        patch.object(command, "run_command", events.run_command),
         patch.object(command, "_sign_executables", events.sign_executables),
         patch.object(command, "_create_installer", events.create_installer),
         patch.object(command, "_sign_installer", events.sign_installer),
@@ -295,7 +292,6 @@ def test_run_propagates_installer_signing_failure():
 
     assert exc_info.value is error
     assert events.mock_calls == [
-        call.run_command("py2exe"),
         call.sign_executables(),
         call.create_installer(),
         call.sign_installer(),

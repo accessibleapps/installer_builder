@@ -67,9 +67,6 @@ class NewInnoSetupCommand(distutils.core.Command):
             self.dist_dir = "dist"
             
     def run(self):
-        # Run py2exe first to create executable
-        self.run_command('py2exe')
-        
         # Sign executables if requested
         if self.certificate_file:
             self._sign_executables()

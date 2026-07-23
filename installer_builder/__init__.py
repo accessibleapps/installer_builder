@@ -544,7 +544,8 @@ class InstallerBuilder(object):
             setup_arguments[self.app_type][0]["other_resources"] = (
                 innosetup.manifest(self.name),
             )
-            if "py2exe" in sys.argv[1:]:
+            requested_commands = set(sys.argv[1:])
+            if {"py2exe", "innosetup", self.build_command} & requested_commands:
                 import py2exe
 
                 targets = setup_arguments[self.app_type]
@@ -561,7 +562,8 @@ class InstallerBuilder(object):
                         "product_version": self.version,
                     },
                 )
-                return
+                if "py2exe" in requested_commands:
+                    return
         setuptools.setup(**setup_arguments)
 
     def get_copyright(self):

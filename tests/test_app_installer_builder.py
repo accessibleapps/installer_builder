@@ -117,3 +117,26 @@ def test_py2exe_command_uses_current_freeze_api(monkeypatch):
         "product_name": "Test App",
         "product_version": "1.0.0",
     }
+
+
+def test_innosetup_command_freezes_before_setuptools_dispatch(monkeypatch):
+    freeze = Mock()
+    setup = Mock(side_effect=lambda **kwargs: assert_freeze_called())
+
+    def assert_freeze_called():
+        assert freeze.called
+
+    monkeypatch.setattr("py2exe.freeze", freeze)
+    monkeypatch.setattr("setuptools.setup", setup)
+    monkeypatch.setattr(sys, "argv", ["setup.py", "innosetup"])
+    builder = InstallerBuilder(
+        main_module="main.pyw",
+        name="Test App",
+        version="1.0.0",
+        author="Accessible Apps",
+    )
+
+    builder.build_installer()
+
+    freeze.assert_called_once()
+    setup.assert_called_once()
