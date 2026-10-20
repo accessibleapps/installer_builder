@@ -16,7 +16,7 @@ A Python package that simplifies creating Windows and macOS installers for Pytho
 ## Requirements
 
 ### Windows
-- Python 2.5 or later
+- Python 3.8.6 or later
 - py2exe
 - pywin32
 - InnoSetup
