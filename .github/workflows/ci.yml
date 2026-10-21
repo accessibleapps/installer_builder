@@ -35,9 +35,12 @@ jobs:
         run: uvx --from check-jsonschema==0.38.2 check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
       - name: Run complete mocked test suite
         run: uv run pytest
-      - name: Check configured mypy target and API compatibility
+      - name: Check configured mypy target and API compatibility (Python 3.8)
         if: matrix.python == '3.8'
         run: uv run --extra dev python checks/mypy_compatibility.py -v
+      - name: Check configured mypy target and API compatibility (Python 3.13)
+        if: matrix.python == '3.8'
+        run: uv run --isolated --python 3.13 --extra dev python checks/mypy_compatibility.py -v
       - name: Build wheel and source distribution
         run: uv build
       - name: Require both package artifacts
