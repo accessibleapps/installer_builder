@@ -6,14 +6,15 @@ range/target compatibility change landed separately in #7. Preserve package
 
 # State
 
-repair/task6-installer-mypy-baseline is locally rebased onto verified merged
-master fad12d9a3eafa59fcd6033e54534c4eee3ed2fb7 using --no-update-refs. Draft
-#5 remains open and unmerged at published old head
-2f18a7922a3bec7ca31f9fadf633081403aad973; this rebased successor is unpublished.
+Published PR #5 remains open and unmerged, with full typing work remaining.
+repair/task6-installer-mypy-baseline was genuinely rebased onto merged master
+fad12d9a3eafa59fcd6033e54534c4eee3ed2fb7 using --no-update-refs. The last
+recorded completed measurement is run 39555011151 at published source head
+cde0f5c85b442e727583f06a6eeec352eaa0003a, detailed below. Live PR checks are
+authoritative for later heads; that measurement is not a promised later result.
 The delta adds only the same three-line full-package gate in the existing
 Windows Python 3.8 leg. The merged base now supplies mypy>=0.991,<1.15 and
 the unchanged three-case target/API/config probes on tool Python 3.8 and 3.13.
-The new full-package result with selected 1.14.1 remains pending hosted CI.
 No full package checker command has run locally.
 
 # Decisions and why
@@ -56,6 +57,9 @@ archive/task6-installer-mypy-baseline-before-fad12 preserves published
 2f18a7922a3bec7ca31f9fadf633081403aad973. The redundant stacked probe branch
 stays unchanged at fd0103dc83f89e66c12b413e87d6fa724cbfbd91; it was not rebased
 or forced through duplicate conflicts. Original PR #4 remains unchanged.
+These earlier archive tips are historical. Named
+archive/task6-installer-mypy-baseline-measurement-cde0f5c8 preserves the exact
+cde0f5c85b442e727583f06a6eeec352eaa0003a measured tip before this note correction.
 
 # Verification
 
@@ -66,11 +70,16 @@ configured package check with 115 errors in four files using the existing <1.0
 tool; its Python 3.14 tests/build passed. The next published baseline 2f18a792
 had 112 diagnostics with mypy 0.991 in run 39552363115 after the three helper
 diagnostics disappeared; both 71-test suites passed. These are historical
-results under the old <1.0 range, not counts for this rebased head. Actual #7
+results under the old <1.0 range. Actual #7
 landed the narrower compatible <1.15 range and bounded probes separately.
-The full-package result with 1.14.1 needs fresh hosted measurement; no green
-baseline or new diagnostic count is inferred. No local full checker,
-tests/build or installer/signing action ran, including during this rebase.
+The last recorded completed measurement, run 39555011151 at exact cde0f5c8,
+selected mypy 1.14.1 and failed with 106 errors in four package files. Both
+71-test suites passed, as did all three compatibility cases on tool Python 3.8
+and 3.13. The Python 3.8 build was skipped after the full-check failure; the
+Python 3.14 build succeeded. This remains a red full-package baseline. Actual
+review approved the workflow source hunk and requested only this stale-note
+correction. No local full checker, tests/build or installer/signing action ran,
+including for this note-only correction.
 Complete delta inspection confirms the same three-line unsuppressed gate and
 no delta to merged source, tests, manifest, probe assertions or strict flags.
 After resolving the adjacent-step conflict, actionlint 1.7.12 again exited 0
@@ -79,10 +88,10 @@ checker execution was added to that static workflow verification.
 
 # Next step
 
-Return the clean rebased local commit/full diff for coordinator review before
-guarded publication of draft #5 and fresh hosted baseline measurement under the
-landed range. Keep original #4 and the redundant stacked candidate unchanged.
-Draft #5 remains unresolved and has not landed; no annotation migration or
-suppression is proposed.
-No Claude, blocked review route, QActivate, settings, remote write, merge or
-release.
+Next engineering work is bounded genuine typing repair informed by the actual
+diagnostics and source/callers, preserving configured checks and strict flags.
+This note correction authorizes no broad annotation migration or suppression.
+Keep original #4, the redundant stacked candidate and canonical work unchanged.
+PR #5 remains open/unmerged; do not merge until the relevant full check is green
+and source review is complete. Live checks govern later heads. No model, remote
+write, source/config/test changes or merge occurred for this correction.
