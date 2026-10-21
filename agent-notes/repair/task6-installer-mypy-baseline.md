@@ -101,7 +101,12 @@ was changed by this local rebase. Named
 archive/task6-installer-mypy-baseline-before-fad12 preserves published
 2f18a7922a3bec7ca31f9fadf633081403aad973. The redundant stacked probe branch
 stays unchanged at fd0103dc83f89e66c12b413e87d6fa724cbfbd91; it was not rebased
-or forced through duplicate conflicts. Original PR #4 remains unchanged.
+or forced through duplicate conflicts. The PR #4 branch was not modified by
+this task. Dependabot independently refreshed it to
+995f935b95fbe64004cb47fc779af9f13a589e3a with <2.5 after #7; coordinator
+verified run 39554719205 fails two 3.13 probe cases with mypy 2.4. The original
+62d473dd archive remains preserved; no result for that separate head is implied
+by this #5 source repair.
 These earlier archive tips are historical. Named
 archive/task6-installer-mypy-baseline-measurement-cde0f5c8 preserves the exact
 cde0f5c85b442e727583f06a6eeec352eaa0003a measured tip before this note correction.
