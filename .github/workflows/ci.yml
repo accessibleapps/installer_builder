@@ -30,6 +30,9 @@ jobs:
           version: "0.13.4"
           python-version: ${{ matrix.python }}
           enable-cache: false
+      - name: Validate Dependabot configuration
+        if: matrix.python == '3.14'
+        run: uvx --from check-jsonschema==0.38.2 check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
       - name: Run complete mocked test suite
         run: uv run pytest
       - name: Build wheel and source distribution
