@@ -1,10 +1,11 @@
-from __future__ import print_function
+from __future__ import annotations, print_function
 import os
 import subprocess
 import sys
 import platform
 import logging
 import winreg
+from typing import Optional, Union
 
 # Set up module logger
 logger = logging.getLogger(__name__)
@@ -13,11 +14,11 @@ DEFAULT_TIMESTAMP_SERVER = 'http://timestamp.digicert.com'
 
 class SignToolNotFoundError(Exception):
     """Exception raised when signtool.exe cannot be found."""
-    def __init__(self, message="Could not find signtool.exe. You may need to install the Windows SDK or Visual Studio."):
+    def __init__(self, message: str = "Could not find signtool.exe. You may need to install the Windows SDK or Visual Studio.") -> None:
         self.message = message
         super().__init__(self.message)
 
-def find_signtool():
+def find_signtool() -> str:
     """
     Find signtool.exe on the system, preferring architecture match and newest version.
     
@@ -206,7 +207,7 @@ def find_signtool():
     # Return the best match path
     return best_match[0]
 
-def sign(filename, url='', description='', timestamp_server=DEFAULT_TIMESTAMP_SERVER, certificate_file='', certificate_password=''):
+def sign(filename: Union[str, os.PathLike[str]], url: Optional[str] = '', description: str = '', timestamp_server: str = DEFAULT_TIMESTAMP_SERVER, certificate_file: Optional[Union[str, os.PathLike[str]]] = '', certificate_password: Optional[str] = '') -> int:
     """
     Sign a Windows executable or DLL using signtool.
     

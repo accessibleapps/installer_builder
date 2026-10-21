@@ -1,16 +1,32 @@
+from __future__ import annotations
+
 import distutils.core
+from distutils.dist import Distribution
 import os
 import pathlib
 import platform
+from types import ModuleType
+from typing import TYPE_CHECKING, List, Optional, Protocol, Union, cast
+
+if TYPE_CHECKING:
+    import innosetup_builder
+
+Path = Union[str, "os.PathLike[str]"]
+
+
+class InstallerCommand(Protocol):
+    distribution: Distribution
+    register_startup: bool
 
 # Only import Windows-specific modules on Windows
 if platform.system() == "Windows":
-    from . import signtool
+    from . import signtool as _signtool
+    signtool: Optional[ModuleType] = _signtool
 else:
     signtool = None
 
 
-def create_installer_config(builder_instance, dist_dir):
+def create_installer_config(builder_instance: InstallerCommand, dist_dir: Path) -> innosetup_builder.Installer:
     """Convert InstallerBuilder config to innosetup_builder.Installer"""
     import innosetup_builder
     
@@ -29,9 +45,15 @@ def create_installer_config(builder_instance, dist_dir):
     installer.run_at_startup = builder_instance.register_startup
     
     # Set output filename
+    app_name, app_version = installer.app_name, installer.app_version
+    # The existing join requires strings; retain its TypeError for invalid metadata.
+    if not isinstance(app_name, str):
+        raise TypeError(f"sequence item 0: expected str instance, {type(app_name).__name__} found")
+    if not isinstance(app_version, str):
+        raise TypeError(f"sequence item 1: expected str instance, {type(app_version).__name__} found")
     installer_filename = "-".join([
-        installer.app_name, 
-        installer.app_version, 
+        app_name,
+        app_version,
         'setup'
     ])
     installer.output_base_filename = installer_filename
@@ -53,20 +75,20 @@ class NewInnoSetupCommand(distutils.core.Command):
         ("dist-dir=", "d", "directory to put final built distributions in"),
     ]
     
-    def initialize_options(self):
-        self.extra_inno_script = None
-        self.certificate_file = None
-        self.certificate_password = None
-        self.extra_sign = []
+    def initialize_options(self) -> None:
+        self.extra_inno_script: Optional[str] = None
+        self.certificate_file: Optional[Path] = None
+        self.certificate_password: Optional[str] = None
+        self.extra_sign: List[Path] = []
         self.register_startup = False
-        self.dist_dir = None
+        self.dist_dir: Optional[Path] = None
         
-    def finalize_options(self):
+    def finalize_options(self) -> None:
         self.set_undefined_options('bdist', ('dist_dir', 'dist_dir'))
         if self.dist_dir is None:
             self.dist_dir = "dist"
             
-    def run(self):
+    def run(self) -> None:
         # Sign executables if requested
         if self.certificate_file:
             self._sign_executables()
@@ -78,22 +100,25 @@ class NewInnoSetupCommand(distutils.core.Command):
         if self.certificate_file:
             self._sign_installer()
     
-    def _create_installer(self):
+    def _create_installer(self) -> None:
         import innosetup_builder
         
         # Create installer config from distribution metadata
-        installer_config = create_installer_config(self, self.dist_dir)
+        # distutils finalizes options before run(); finalize_options supplies dist.
+        dist_dir = cast(Path, self.dist_dir)
+        installer_config = create_installer_config(self, dist_dir)
         
         # Create compiler and build installer
         innosetup_compiler = innosetup_builder.InnosetupCompiler()
-        innosetup_compiler.build(installer_config, self.dist_dir)
+        innosetup_compiler.build(installer_config, dist_dir)
         
         output_name = f"{installer_config.app_name}-{installer_config.app_version}-setup.exe"
         print(f"Created installer: {output_name}")
     
-    def _sign_executables(self):
+    def _sign_executables(self) -> None:
         """Sign all executables in dist directory"""
-        for root, _, files in os.walk(self.dist_dir):
+        dist_dir = cast(Path, self.dist_dir)  # finalized before run()
+        for root, _, files in os.walk(dist_dir):
             for file in files:
                 if file.lower().endswith('.exe'):
                     self._sign_file(os.path.join(root, file))
@@ -101,15 +126,15 @@ class NewInnoSetupCommand(distutils.core.Command):
         # Sign extra files if specified
         if self.extra_sign:
             for extra in self.extra_sign:
-                self._sign_file(os.path.join(self.dist_dir, extra))
+                self._sign_file(os.path.join(dist_dir, extra))
     
-    def _sign_installer(self):
+    def _sign_installer(self) -> None:
         """Sign the created installer"""
         installer_name = f"{self.distribution.metadata.name}-{self.distribution.metadata.version}-setup.exe"
-        installer_path = os.path.join(self.dist_dir, installer_name)
+        installer_path = os.path.join(cast(Path, self.dist_dir), installer_name)
         self._sign_file(installer_path)
     
-    def _sign_file(self, filepath):
+    def _sign_file(self, filepath: Path) -> None:
         """Sign a single file"""
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"File to sign not found: {filepath}")
