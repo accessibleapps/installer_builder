@@ -3,9 +3,9 @@
 ## Goal
 
 Correct README's Python 2.5 statement to the actual pyproject minimum, 3.8.6.
-The original slice was one documentation line. Current authorized follow-up adds
-minimal existing full-suite/package CI, about 40 YAML lines plus README and this
-existing living note. No source, dependency, signing or support-policy change.
+The original slice was one documentation line; its safe test/build documentation
+and living note remain. The reviewed suite/build workflow is now in merged
+baseline PR #3. No source, dependency, signing or support-policy change.
 
 ## Historical first-pass state
 
@@ -43,7 +43,7 @@ and Python caches; none are included. Canonical untracked material is untouched.
 No configured hooksPath or active hook files existed. That reviewed documentation
 slice was published as draft PR #2 at 8c9026344324e4cc875b94b4b7a62e650c35f5c2.
 
-## Current CI follow-up
+## Historical CI follow-up
 
 - Fresh default remains master 099ceb30876aba2b853a8bb98815cba3bb19f3e9. Existing
   OPEN/DRAFT PR #2, original local feature branch and published remote tip all
@@ -78,7 +78,7 @@ slice was published as draft PR #2 at 8c9026344324e4cc875b94b4b7a62e650c35f5c2.
   nonempty wheel/sdist checks. No runtime test source, package metadata or native
   installer/signing/release workflow changes.
 
-## Next step
+## Historical CI audits
 
 Final authored YAML passed actionlint 1.7.12 and zizmor 1.31.1 --offline --pedantic
 with zero findings; optional actionlint shellcheck/pyflakes integrations disabled.
@@ -88,3 +88,40 @@ coordinator review before any publication. Historical 62-pass result above is
 not new final-head hosted evidence. Do not rerun local full CI, suppress default
 failures, call external reviewers, publish, merge or change settings under this
 initial local-patch authority.
+
+## Historical local stack preparation
+
+Published draft PR #2 advanced to b57d20b46bab111b41f40115ccbcca22a4b8274a. Its
+CI exposed the existing master Python 3.8 test syntax defect. Green prerequisite
+e45937f8a16565e0160621b956d3b5fb3bb9aefe fixed that syntax and hosted the same
+tests/build (62 passed per Windows 3.8/3.14, run 39524730407). Before it merged,
+local stack 78bafc57c7835a52fe45297064212e0bae988ebc merged full b57 onto e459,
+retaining all feature work. That exact stack is archived before this rebase.
+
+## Current landed-base rebase
+
+Baseline PR #3 is now merged as 8f5d7f28381066ec3bafac95468e3d7970261d58 after
+actual review and green hosted tests/build. Fresh remote master is that exact
+commit; its tree equals e45937f, but the real squash is the required new ancestor.
+The original PR remains OPEN/DRAFT at b57d20b; canonical local master stays
+099ceb3 and original local feature stays 8c90263 with all user work untouched.
+
+Only isolated repair/task6-installer-feature-successor was genuinely rebased via
+--no-update-refs --onto 8f5d7f2 e45937f. It replays the two original feature
+commits onto landed master. Ordinary rebase omits edits made inside the old local
+merge, so this living note retains that stack history and updates the current
+handoff. Full approved README is byte-identical to old stack 78bafc5; workflow,
+source, tests and manifest are identical to landed master.
+
+Separate before-landed-rebase refs preserve old stack 78bafc5, original local
+feature 8c90263 and current published b57d20b, plus all earlier archives. Explicit
+--no-update-refs was used because global rebase.updateRefs is true. No remote
+branch movement, local full CI, model invocation or unrelated changes occurred.
+
+## Next step
+
+Return the complete local head/diff for coordinator review before any publication.
+Recapture live default and original local/published tips, then obtain exact-head
+guarded publication authority. Full final-head hosted checks and actual review
+remain required before merge; baseline results are not successor results.
+No description, settings/security, release or remote merge action is authorized.
