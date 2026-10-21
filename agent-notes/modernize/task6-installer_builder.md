@@ -98,7 +98,7 @@ tests/build (62 passed per Windows 3.8/3.14, run 39524730407). Before it merged,
 local stack 78bafc57c7835a52fe45297064212e0bae988ebc merged full b57 onto e459,
 retaining all feature work. That exact stack is archived before this rebase.
 
-## Current landed-base rebase
+## Historical landed-base rebase
 
 Baseline PR #3 is now merged as 8f5d7f28381066ec3bafac95468e3d7970261d58 after
 actual review and green hosted tests/build. Fresh remote master is that exact
@@ -117,6 +117,25 @@ Separate before-landed-rebase refs preserve old stack 78bafc5, original local
 feature 8c90263 and current published b57d20b, plus all earlier archives. Explicit
 --no-update-refs was used because global rebase.updateRefs is true. No remote
 branch movement, local full CI, model invocation or unrelated changes occurred.
+
+## Current rebase after Dependabot merged
+
+PR #1 merged as ad7a2a1326484ba8ca12eb7a690de4d2607d6dbe after its actual
+Claude review and green hosted matrix. Fresh authenticated origin/master is that
+exact commit. PR #2 remains published at a22928e6b91db9e5f071034156dc76d73fe4da58;
+backup/task6-installer-feature-{local,published}-before-dependabot-rebase preserve
+that exact tip, and the detached review checkout plus every older archive remain.
+
+Genuinely rebased repair/task6-installer-feature-successor with --no-update-refs
+--onto ad7a2a1 8f5d7f2. All three feature commits replayed cleanly, preserving
+the complete README correction/documentation and the newly landed Dependabot
+configuration and schema CI step. Source, tests, workflow and manifest equal
+current master. Canonical dirty work and original feature worktrees are untouched.
+
+Hosted run 39535871457 and Claude's two-pass no-findings review/gate cover old
+a22928e only; they are historical evidence, not approval of this new local head.
+No new hosted result or review exists yet. No push, full local CI, model call,
+native tool invocation, settings change or description edit occurred.
 
 ## Next step
 
