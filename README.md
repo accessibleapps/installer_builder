@@ -38,6 +38,20 @@ Run the tracked test suite with:
 uv run pytest
 ```
 
+CI runs the complete suite on Windows with CPython 3.8 and 3.14. The tests mock
+freezer, compiler and signing operations; they do not create or sign installers.
+Python 3.8 covers the declared minimum, and 3.14 is the latest minor supported by
+the current py2exe dependency. This matrix does not establish Python 3.15 support.
+
+Build this library's wheel and source distribution without building an installer:
+
+```powershell
+uv build
+```
+
+CI builds these packages after the tests and requires both artifacts. No lockfile
+is tracked, so the test command resolves the existing declared dependencies.
+
 ## Basic Usage
 
 ```python
