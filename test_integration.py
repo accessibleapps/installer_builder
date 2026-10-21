@@ -110,14 +110,12 @@ def test_legacy_requested_signing_routes_executable_and_bootstrapper(
     command.certificate_password = "password"
     command.extra_sign = ["bootstrap.exe"]
 
-    with (
-        patch.object(
+    with patch.object(
             legacy_innosetup_module.os,
             "walk",
             return_value=[("dist", [], ["TestApp.exe", "readme.txt"])],
-        ),
-        patch.object(command, "sign_executable") as sign_executable,
-    ):
+        ), \
+        patch.object(command, "sign_executable") as sign_executable:
         command.sign_executables()
 
     assert sign_executable.call_args_list == [
@@ -142,10 +140,8 @@ def test_legacy_requested_signing_succeeds_for_each_target(
     command.certificate_file = "certificate.pfx"
     command.certificate_password = "password"
 
-    with (
-        patch.object(legacy_innosetup_module.os.path, "exists", return_value=True),
-        patch.object(legacy_innosetup_module.signtool, "sign") as sign,
-    ):
+    with patch.object(legacy_innosetup_module.os.path, "exists", return_value=True), \
+        patch.object(legacy_innosetup_module.signtool, "sign") as sign:
         command.sign_executable(target)
 
     sign.assert_called_once_with(
@@ -164,11 +160,9 @@ def test_legacy_requested_signing_missing_target_fails_for_each_target(
     command = legacy_innosetup_module.innosetup(Distribution())
     expected_message = f"File to sign not found: {target}"
 
-    with (
-        patch.object(legacy_innosetup_module.os.path, "exists", return_value=False),
-        patch.object(legacy_innosetup_module.signtool, "sign") as sign,
-        pytest.raises(FileNotFoundError, match=re.escape(expected_message)),
-    ):
+    with patch.object(legacy_innosetup_module.os.path, "exists", return_value=False), \
+        patch.object(legacy_innosetup_module.signtool, "sign") as sign, \
+        pytest.raises(FileNotFoundError, match=re.escape(expected_message)):
         command.sign_executable(target)
 
     sign.assert_not_called()
@@ -183,14 +177,12 @@ def test_legacy_requested_signing_missing_certificate_fails_for_each_target(
     expected_message = "Certificate file not found: missing.pfx"
     error = FileNotFoundError(expected_message)
 
-    with (
-        patch.object(legacy_innosetup_module.os.path, "exists", return_value=True),
-        patch.object(legacy_innosetup_module.signtool, "sign", side_effect=error),
+    with patch.object(legacy_innosetup_module.os.path, "exists", return_value=True), \
+        patch.object(legacy_innosetup_module.signtool, "sign", side_effect=error), \
         pytest.raises(
             FileNotFoundError,
             match=re.escape(expected_message),
-        ) as exc_info,
-    ):
+        ) as exc_info:
         command.sign_executable(target)
 
     assert exc_info.value is error
@@ -205,14 +197,12 @@ def test_legacy_requested_signing_missing_tool_fails_for_each_target(
     error = legacy_innosetup_module.signtool.SignToolNotFoundError()
     expected_message = str(error)
 
-    with (
-        patch.object(legacy_innosetup_module.os.path, "exists", return_value=True),
-        patch.object(legacy_innosetup_module.signtool, "sign", side_effect=error),
+    with patch.object(legacy_innosetup_module.os.path, "exists", return_value=True), \
+        patch.object(legacy_innosetup_module.signtool, "sign", side_effect=error), \
         pytest.raises(
             legacy_innosetup_module.signtool.SignToolNotFoundError,
             match=re.escape(expected_message),
-        ) as exc_info,
-    ):
+        ) as exc_info:
         command.sign_executable(target)
 
     assert exc_info.value is error
@@ -226,11 +216,9 @@ def test_legacy_requested_signing_signer_exception_fails_for_each_target(
     command = legacy_innosetup_module.innosetup(Distribution())
     error = OSError("sentinel signer failure")
 
-    with (
-        patch.object(legacy_innosetup_module.os.path, "exists", return_value=True),
-        patch.object(legacy_innosetup_module.signtool, "sign", side_effect=error),
-        pytest.raises(OSError) as exc_info,
-    ):
+    with patch.object(legacy_innosetup_module.os.path, "exists", return_value=True), \
+        patch.object(legacy_innosetup_module.signtool, "sign", side_effect=error), \
+        pytest.raises(OSError) as exc_info:
         command.sign_executable(target)
 
     assert exc_info.value is error
@@ -248,14 +236,12 @@ def test_legacy_run_routes_compiled_installer_to_signing(
     script = Mock()
     script.compile_script.return_value = compiled_installer
 
-    with (
-        patch.object(command, "run_command") as run_command,
-        patch.object(command, "get_finalized_command") as get_finalized_command,
-        patch.object(command, "_find_inno_setup", return_value="ISCC.exe"),
-        patch.object(legacy_innosetup_module, "InnoScript", return_value=script),
-        patch.object(command, "sign_executables") as sign_executables,
-        patch.object(command, "sign_executable") as sign_executable,
-    ):
+    with patch.object(command, "run_command") as run_command, \
+        patch.object(command, "get_finalized_command") as get_finalized_command, \
+        patch.object(command, "_find_inno_setup", return_value="ISCC.exe"), \
+        patch.object(legacy_innosetup_module, "InnoScript", return_value=script), \
+        patch.object(command, "sign_executables") as sign_executables, \
+        patch.object(command, "sign_executable") as sign_executable:
         command.run()
 
     run_command.assert_called_once_with("py2exe")

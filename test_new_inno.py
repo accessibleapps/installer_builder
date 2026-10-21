@@ -116,14 +116,12 @@ def test_requested_signing_routes_executable_and_bootstrapper():
     command.certificate_password = "password"
     command.extra_sign = ["bootstrap.exe"]
 
-    with (
-        patch.object(
+    with patch.object(
             new_inno_command.os,
             "walk",
             return_value=[("dist", [], ["TestApp.exe", "readme.txt"])],
-        ),
-        patch.object(command, "_sign_file") as sign_file,
-    ):
+        ), \
+        patch.object(command, "_sign_file") as sign_file:
         command._sign_executables()
 
     assert sign_file.call_args_list == [
@@ -158,10 +156,8 @@ def test_requested_signing_succeeds_for_each_target(target):
     command.certificate_file = "certificate.pfx"
     command.certificate_password = "password"
 
-    with (
-        patch.object(new_inno_command.os.path, "exists", return_value=True),
-        patch.object(new_inno_command.signtool, "sign") as sign,
-    ):
+    with patch.object(new_inno_command.os.path, "exists", return_value=True), \
+        patch.object(new_inno_command.signtool, "sign") as sign:
         command._sign_file(target)
 
     sign.assert_called_once_with(
@@ -177,11 +173,9 @@ def test_requested_signing_missing_target_fails_for_each_target(target):
     command = new_inno_command.NewInnoSetupCommand(Distribution())
     expected_message = f"File to sign not found: {target}"
 
-    with (
-        patch.object(new_inno_command.os.path, "exists", return_value=False),
-        patch.object(new_inno_command.signtool, "sign") as sign,
-        pytest.raises(FileNotFoundError, match=re.escape(expected_message)),
-    ):
+    with patch.object(new_inno_command.os.path, "exists", return_value=False), \
+        patch.object(new_inno_command.signtool, "sign") as sign, \
+        pytest.raises(FileNotFoundError, match=re.escape(expected_message)):
         command._sign_file(target)
 
     sign.assert_not_called()
@@ -192,12 +186,10 @@ def test_requested_signing_unavailable_support_fails_for_each_target(target):
     command = new_inno_command.NewInnoSetupCommand(Distribution())
     expected_message = "Signing not available on TestOS"
 
-    with (
-        patch.object(new_inno_command.os.path, "exists", return_value=True),
-        patch.object(new_inno_command, "signtool", None),
-        patch.object(new_inno_command.platform, "system", return_value="TestOS"),
-        pytest.raises(RuntimeError, match=re.escape(expected_message)),
-    ):
+    with patch.object(new_inno_command.os.path, "exists", return_value=True), \
+        patch.object(new_inno_command, "signtool", None), \
+        patch.object(new_inno_command.platform, "system", return_value="TestOS"), \
+        pytest.raises(RuntimeError, match=re.escape(expected_message)):
         command._sign_file(target)
 
 
@@ -207,14 +199,12 @@ def test_requested_signing_missing_certificate_fails_for_each_target(target):
     expected_message = "Certificate file not found: missing.pfx"
     error = FileNotFoundError(expected_message)
 
-    with (
-        patch.object(new_inno_command.os.path, "exists", return_value=True),
-        patch.object(new_inno_command.signtool, "sign", side_effect=error),
+    with patch.object(new_inno_command.os.path, "exists", return_value=True), \
+        patch.object(new_inno_command.signtool, "sign", side_effect=error), \
         pytest.raises(
             FileNotFoundError,
             match=re.escape(expected_message),
-        ) as exc_info,
-    ):
+        ) as exc_info:
         command._sign_file(target)
 
     assert exc_info.value is error
@@ -226,14 +216,12 @@ def test_requested_signing_missing_tool_fails_for_each_target(target):
     error = SignToolNotFoundError()
     expected_message = str(error)
 
-    with (
-        patch.object(new_inno_command.os.path, "exists", return_value=True),
-        patch.object(new_inno_command.signtool, "sign", side_effect=error),
+    with patch.object(new_inno_command.os.path, "exists", return_value=True), \
+        patch.object(new_inno_command.signtool, "sign", side_effect=error), \
         pytest.raises(
             SignToolNotFoundError,
             match=re.escape(expected_message),
-        ) as exc_info,
-    ):
+        ) as exc_info:
         command._sign_file(target)
 
     assert exc_info.value is error
@@ -244,11 +232,9 @@ def test_requested_signing_signer_exception_fails_for_each_target(target):
     command = new_inno_command.NewInnoSetupCommand(Distribution())
     error = OSError("sentinel signer failure")
 
-    with (
-        patch.object(new_inno_command.os.path, "exists", return_value=True),
-        patch.object(new_inno_command.signtool, "sign", side_effect=error),
-        pytest.raises(OSError) as exc_info,
-    ):
+    with patch.object(new_inno_command.os.path, "exists", return_value=True), \
+        patch.object(new_inno_command.signtool, "sign", side_effect=error), \
+        pytest.raises(OSError) as exc_info:
         command._sign_file(target)
 
     assert exc_info.value is error
@@ -261,12 +247,10 @@ def test_run_stops_before_installer_when_executable_or_bootstrapper_signing_fail
     events = Mock()
     events.sign_executables.side_effect = error
 
-    with (
-        patch.object(command, "_sign_executables", events.sign_executables),
-        patch.object(command, "_create_installer", events.create_installer),
-        patch.object(command, "_sign_installer", events.sign_installer),
-        pytest.raises(OSError) as exc_info,
-    ):
+    with patch.object(command, "_sign_executables", events.sign_executables), \
+        patch.object(command, "_create_installer", events.create_installer), \
+        patch.object(command, "_sign_installer", events.sign_installer), \
+        pytest.raises(OSError) as exc_info:
         command.run()
 
     assert exc_info.value is error
@@ -282,12 +266,10 @@ def test_run_propagates_installer_signing_failure():
     events = Mock()
     events.sign_installer.side_effect = error
 
-    with (
-        patch.object(command, "_sign_executables", events.sign_executables),
-        patch.object(command, "_create_installer", events.create_installer),
-        patch.object(command, "_sign_installer", events.sign_installer),
-        pytest.raises(OSError) as exc_info,
-    ):
+    with patch.object(command, "_sign_executables", events.sign_executables), \
+        patch.object(command, "_create_installer", events.create_installer), \
+        patch.object(command, "_sign_installer", events.sign_installer), \
+        pytest.raises(OSError) as exc_info:
         command.run()
 
     assert exc_info.value is error
