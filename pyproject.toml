@@ -31,7 +31,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "mypy>=0.991,<1.0",
+    "mypy>=0.991,<1.15",
 ]
 
 [dependency-groups]
