@@ -303,7 +303,7 @@ def srcname(dottedname):
     ext = ext.lower()
 
     # Get source suffixes using importlib
-    _py_src_suffixes = [s.suffix for s in importlib.machinery.SOURCE_SUFFIXES]
+    _py_src_suffixes = importlib.machinery.SOURCE_SUFFIXES
 
     if ext in _py_src_suffixes:
         return filename
@@ -522,7 +522,7 @@ class InnoScript(object):
     def chop(self, filename, dirname=""):
         """get relative path"""
         if not dirname:
-            dirname = self.builder.dist_dir
+            dirname = self.dist_dir
         if dirname[-1] not in "\\/":
             dirname += "\\"
         if filename.startswith(dirname):
@@ -688,7 +688,7 @@ class InnoScript(object):
         metadata = self.metadata
         iss_metadata = dict((k, v % metadata)
                             for k, v in self.metadata_map.items())
-        iss_metadata["OutputDir"] = self.builder.dist_dir
+        iss_metadata["OutputDir"] = self.dist_dir
         iss_metadata["AppId"] = self.appid
         # add InfoBeforeFile
         for filename in (
