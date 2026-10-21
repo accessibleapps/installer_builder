@@ -1,13 +1,10 @@
 # * Encoding: UTF-8
 
-from __future__ import print_function
+from __future__ import annotations, print_function
 
 import setuptools
 
-try:
-    import __builtin__
-except ImportError:
-    import builtins as __builtin__
+import builtins as __builtin__
 import collections
 import datetime
 import fnmatch
@@ -20,6 +17,18 @@ import shutil
 import subprocess
 import sys
 import time
+from typing import TYPE_CHECKING, Any, Callable, DefaultDict, Dict, Iterator, List, Mapping, Optional, Protocol, Set, Tuple, Type, Union, cast
+
+if TYPE_CHECKING:
+    from distutils.core import Command
+
+DataFiles = List[Tuple[str, List[str]]]
+Path = Union[str, "os.PathLike[str]"]
+
+
+class Application(Protocol):
+    @property
+    def name(self) -> str: ...
 
 is_windows = platform.system() == "Windows"
 is_mac = platform.system() == "Darwin"
@@ -49,35 +58,35 @@ class InstallerBuilder(object):
 
     def __init__(
         self,
-        main_module=None,
-        name=None,
-        version=None,
-        url=None,
-        author=None,
-        author_email=None,
-        datafiles=None,
-        includes=None,
-        excludes=None,
-        dll_excludes=None,
-        compressed=False,
-        skip_archive=False,
-        bundle_level=3,
-        optimization_level=1,
-        extra_packages=None,
-        datafile_packages=None,
-        output_directory="release",
-        create_update=False,
-        postbuild_commands=None,
-        osx_frameworks=None,
-        extra_inno_script=None,
-        register_startup=False,
-        localized_packages=None,
-        has_translations=False,
-        certificate_file=None,
-        certificate_password=None,
-        extra_files_to_sign=None,
-        app_type="windows",
-    ):
+        main_module: Optional[Path] = None,
+        name: Optional[str] = None,
+        version: Optional[str] = None,
+        url: Optional[str] = None,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
+        datafiles: Optional[DataFiles] = None,
+        includes: Optional[List[str]] = None,
+        excludes: Optional[List[str]] = None,
+        dll_excludes: Optional[List[str]] = None,
+        compressed: bool = False,
+        skip_archive: bool = False,
+        bundle_level: int = 3,
+        optimization_level: int = 1,
+        extra_packages: Optional[List[str]] = None,
+        datafile_packages: Optional[List[str]] = None,
+        output_directory: Path = "release",
+        create_update: bool = False,
+        postbuild_commands: Optional[Mapping[str, List[str]]] = None,
+        osx_frameworks: Optional[List[str]] = None,
+        extra_inno_script: Optional[str] = None,
+        register_startup: bool = False,
+        localized_packages: Optional[List[str]] = None,
+        has_translations: bool = False,
+        certificate_file: Optional[Path] = None,
+        certificate_password: Optional[str] = None,
+        extra_files_to_sign: Optional[List[Path]] = None,
+        app_type: str = "windows",
+    ) -> None:
         super(InstallerBuilder, self).__init__()
         self.main_module = main_module
         self.name = name
@@ -114,13 +123,13 @@ class InstallerBuilder(object):
         self.create_update = create_update
         if postbuild_commands is None:
             postbuild_commands = {}
-        self.postbuild_commands = collections.defaultdict(list)
+        self.postbuild_commands: DefaultDict[str, List[str]] = collections.defaultdict(list)
         self.postbuild_commands.update(postbuild_commands)
         if osx_frameworks is None:
             osx_frameworks = []
         self.osx_frameworks = osx_frameworks
         self.extra_inno_script = extra_inno_script
-        self.build_start_time = None
+        self.build_start_time: Optional[float] = None
         self.register_startup = register_startup
         if localized_packages is None:
             localized_packages = []
@@ -135,14 +144,14 @@ class InstallerBuilder(object):
             raise ValueError("Invalid app type")
         self.app_type = app_type
 
-    def get_version_specific_excludes(self):
+    def get_version_specific_excludes(self) -> List[str]:
         result = []
         version = float("%d.%d" % (sys.version_info.major, sys.version_info.minor))
         if version < 3.5:
             result.append("jinja2.asyncsupport")
         return result
 
-    def build(self, skip_finalize=False):
+    def build(self, skip_finalize: bool = False) -> None:
         self.build_start_time = time.time()
         self.prebuild_message()
         self.remove_previous_build()
@@ -159,7 +168,7 @@ class InstallerBuilder(object):
             )
             self.report_build_time()
 
-    def _installer_was_created(self):
+    def _installer_was_created(self) -> bool:
         """Check if an installer file was actually created by the build process"""
         try:
             installer_path = self.find_created_installer()
@@ -168,14 +177,14 @@ class InstallerBuilder(object):
             # If installer doesn't exist, no installer was created
             return False
 
-    def prebuild_message(self):
+    def prebuild_message(self) -> None:
         print("Installer builder version %s" % __version__)
         print(
             "Building %s installer for %s %s"
             % (platform.system(), self.name, self.version)
         )
 
-    def remove_previous_build(self):
+    def remove_previous_build(self) -> None:
         print("Removing previous output directories")
         directories = self.build_dirs + [self.output_directory]
         for directory in directories:
@@ -185,8 +194,8 @@ class InstallerBuilder(object):
             shutil.rmtree(directory, ignore_errors=False)
             print("Deleted ", directory)
 
-    def find_datafiles(self):
-        datafiles = []
+    def find_datafiles(self) -> DataFiles:
+        datafiles: DataFiles = []
         for package in self.datafile_packages:
             pkg_datafile_function = DATAFILE_REGISTRY.get(package)
             if pkg_datafile_function is None:
@@ -221,14 +230,14 @@ class InstallerBuilder(object):
         print("Total datafiles to be included: %d" % total_datafiles)
         return self.datafiles + datafiles
 
-    def find_application_language_data(self):
+    def find_application_language_data(self) -> Iterator[Tuple[str, List[str]]]:
         self._validate_translation_inventory(
             self.locale_dir, expected_domain=self.name
         )
         for directory, filenames in self.find_locale_data(self.locale_dir):
             yield directory, filenames
 
-    def _validate_translation_inventory(self, locale_path, expected_domain=None):
+    def _validate_translation_inventory(self, locale_path: Path, expected_domain: Optional[str] = None) -> Tuple[str, ...]:
         application_mode = expected_domain is not None
         catalog_extensions = (".po", ".mo") if application_mode else (".mo",)
         catalogs = []
@@ -287,7 +296,7 @@ class InstallerBuilder(object):
                     % (catalog_directory, expected_domain, found_domain)
                 )
 
-            inventory = {}
+            inventory: Dict[Tuple[str, str], Set[str]] = {}
             for _, directory, stem, extension in catalogs:
                 inventory.setdefault((directory, stem), set()).add(extension)
 
@@ -321,17 +330,17 @@ class InstallerBuilder(object):
 
         return tuple(sorted({stem for _, _, stem, extension in catalogs if extension == ".mo"}))
 
-    def find_babel_datafiles(self):
-        import babel
+    def find_babel_datafiles(self) -> Tuple[Tuple[str, List[str]], ...]:
+        babel = importlib.import_module("babel")
 
         return (
             (
                 "locale-data",
-                glob.glob(os.path.join(babel.__path__[0], "locale-data", "*.*")),
+                glob.glob(os.path.join(cast(List[str], babel.__path__)[0], "locale-data", "*.*")),
             ),
         )
 
-    def find_locale_data(self, locale_path):
+    def find_locale_data(self, locale_path: Path) -> Iterator[Tuple[str, List[str]]]:
         for dirpath, dirnames, filenames in os.walk(locale_path):
             files = []
             for filename in filenames:
@@ -344,12 +353,12 @@ class InstallerBuilder(object):
                 )
                 yield directory, files
 
-    def finalize_build(self):
+    def finalize_build(self) -> None:
         print("Finalizing build...")
         if platform.system() == "Darwin":
             self.remove_embedded_interpreter()
             self.shrink_mac_binaries()
-            self.lipo_file(os.path.join(self.get_app_path(), self.name))
+            self.lipo_file(os.path.join(self.get_app_path(), cast(str, self.name)))
             self.create_dmg()
 
         # Only move output if installer was created
@@ -362,35 +371,35 @@ class InstallerBuilder(object):
         if self.create_update:
             self.create_update_archive()
 
-    def remove_embedded_interpreter(self):
+    def remove_embedded_interpreter(self) -> None:
         print("Replacing the embedded interpreter with a dumby file")
         interpreter_path = os.path.join(self.get_app_path(), "python")
         os.remove(interpreter_path)
         self.execute_command("touch %s" % interpreter_path)
         self.execute_command("chmod +x %s" % interpreter_path)
 
-    def get_app_path(self):
+    def get_app_path(self) -> Path:
         if platform.system() == "Darwin":
             return os.path.join(
                 self.dist_dir, "%s.app" % self.name, "Contents", "MacOS"
             )
         return self.dist_dir
 
-    def create_dmg(self):
+    def create_dmg(self) -> None:
         print("Creating .dmg disk image")
         self.execute_command(
             "hdiutil create -srcfolder dist/%s.app -size 150m dist/%s"
             % (self.name, self.installer_filename())
         )
 
-    def move_output(self):
+    def move_output(self) -> None:
         if not os.path.exists(self.output_directory):
             os.mkdir(self.output_directory)
         destination = os.path.join(self.output_directory, self.installer_filename())
         os.rename(self.find_created_installer(), destination)
         print("Moved generated installer to %s" % destination)
 
-    def create_update_archive(self):
+    def create_update_archive(self) -> None:
         print("Generating update archive")
         name = "%s-%s-%s" % (self.name, self.version, platform.system())
         root_dir = self.dist_dir
@@ -404,7 +413,7 @@ class InstallerBuilder(object):
         os.rename(filename, destination)
         print("Generated update archive filename: %s" % destination)
 
-    def find_created_installer(self):
+    def find_created_installer(self) -> str:
         res = os.path.join("dist", self.installer_filename())
         if not os.path.exists(res):
             res = os.path.join(self.output_directory, self.installer_filename())
@@ -412,7 +421,7 @@ class InstallerBuilder(object):
                 raise RuntimeError("Installer %s does not exist" % res)
         return res
 
-    def installer_filename(self):
+    def installer_filename(self) -> str:
         if platform.system() == "Windows":
             return "%s-%s-setup.exe" % (self.name, self.version)
         elif platform.system() == "Darwin":
@@ -421,7 +430,7 @@ class InstallerBuilder(object):
             # Fallback for other systems
             return "%s-%s-installer" % (self.name, self.version)
 
-    def get_command_class(self):
+    def get_command_class(self) -> Optional[Type[Command]]:
         if platform.system() == "Windows":
             from .new_inno_command import NewInnoSetupCommand
 
@@ -430,18 +439,19 @@ class InstallerBuilder(object):
             import py2app.build_app
 
             return py2app.build_app.py2app
+        return None
 
-    def perform_postbuild_commands(self):
+    def perform_postbuild_commands(self) -> None:
         if not self.postbuild_commands[platform.system().lower()]:
             return
         print("Performing postbuild commands for platform %s" % platform.system())
         for command in self.postbuild_commands[platform.system().lower()]:
             self.execute_command(command)
 
-    def execute_command(self, command):
+    def execute_command(self, command: str) -> None:
         subprocess.check_call([command], shell=True)
 
-    def report_build_statistics(self):
+    def report_build_statistics(self) -> None:
         try:
             installer_path = self.find_created_installer()
             print("Generated installer filename: %s" % installer_path)
@@ -453,7 +463,7 @@ class InstallerBuilder(object):
             print("Build completed - no installer created (py2exe/py2app only)")
         self.report_build_time()
 
-    def shrink_mac_binaries(self):
+    def shrink_mac_binaries(self) -> None:
         shrink_extensions = (".dylib", ".so")
         for basepath, dirs, files in os.walk(self.dist_dir):
             for file in files:
@@ -461,16 +471,17 @@ class InstallerBuilder(object):
                     path = os.path.join(basepath, file)
                     self.lipo_file(path)
 
-    def lipo_file(self, filename):
+    def lipo_file(self, filename: Path) -> None:
         self.execute_command("lipo -thin i386 %s -output %s" % (filename, filename))
         print("Lipoed file %s" % filename)
 
-    def report_build_time(self):
-        build_time = time.time() - self.build_start_time
+    def report_build_time(self) -> None:
+        # build() records this before either path that reports elapsed time.
+        build_time = time.time() - cast(float, self.build_start_time)
         td = datetime.timedelta(seconds=build_time)
         print("Build completed in ", format(td))
 
-    def build_installer(self):
+    def build_installer(self) -> None:
         if None in (self.name, self.main_module):
             raise RuntimeError("Insufficient information provided to build")
         if (
@@ -481,7 +492,8 @@ class InstallerBuilder(object):
             self.certificate_password = os.environ.get(
                 "CERTIFICATE_PASS"
             ) or getpass.getpass("Certificate password:")
-        setup_arguments = {
+        # setuptools/py2exe accept heterogeneous, extensible keyword payloads.
+        setup_arguments: Dict[str, Any] = {
             "name": self.name,
             "author": self.author,
             "author_email": self.author_email,
@@ -566,15 +578,16 @@ class InstallerBuilder(object):
                     return
         setuptools.setup(**setup_arguments)
 
-    def get_copyright(self):
+    def get_copyright(self) -> str:
         return "Copyright ©%d %s" % (datetime.date.today().year, self.author)
 
 
 class AppInstallerBuilder(InstallerBuilder):
-    def __init__(self, application=None, **kwargs):
+    def __init__(self, application: Optional[Application] = None, **kwargs: Any) -> None:
         self.application = application
-        new_kwargs = {}
-        new_kwargs["name"] = application.name
+        # Application providers and forwarded builder keyword options are dynamic.
+        new_kwargs: Dict[str, Any] = {}
+        new_kwargs["name"] = cast(Application, application).name
         new_kwargs["version"] = getattr(application, "version", None)
         new_kwargs["url"] = getattr(application, "website", None)
         new_kwargs["author"] = getattr(application, "author", None)
@@ -593,16 +606,16 @@ class AppInstallerBuilder(InstallerBuilder):
         localized_packages = kwargs.get("localized_packages", [])
         config_spec = getattr(application, "config_spec", None)
         if config_spec is True:
-            config_spec = "%s.confspec" % application.name
+            config_spec = "%s.confspec" % cast(Application, application).name
         if config_spec is not None:
             datafiles.extend([("", [config_spec])])
-        import babel
+        babel = importlib.import_module("babel")
 
-        datafiles.extend([("babel", [os.path.join(babel.__path__[0], "global.dat")])])
-        from certifi import __file__ as cert_path
+        datafiles.extend([("babel", [os.path.join(cast(List[str], babel.__path__)[0], "global.dat")])])
+        cert_path = importlib.import_module("certifi").__file__
 
         datafiles.extend(
-            [("", [os.path.join(os.path.dirname(cert_path), "cacert.pem")])]
+            [("", [os.path.join(os.path.dirname(cast(str, cert_path)), "cacert.pem")])]
         )
         kwargs["datafiles"] = datafiles
         if getattr(application, "output", False):
@@ -636,7 +649,7 @@ class AppInstallerBuilder(InstallerBuilder):
         kwargs["extra_files_to_sign"] = files_to_sign
         new_kwargs.update(kwargs)
         if hasattr(application, "register_startup"):
-            new_kwargs["register_startup"] = application.register_startup
+            new_kwargs["register_startup"] = getattr(application, "register_startup")
         if hasattr(application, "debug_port") or hasattr(application, "debug_host"):
             if sys.version_info.major < 3:
                 includes.append("SocketServer")  # not picked up on Mac
@@ -646,21 +659,22 @@ class AppInstallerBuilder(InstallerBuilder):
         super(AppInstallerBuilder, self).__init__(**new_kwargs)
 
 
-def format_filesize(num):
+def format_filesize(num: float) -> Optional[str]:
     for x in ["bytes", "KB", "MB", "GB", "TB"]:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
+    return None
 
 
-def standard_wx_excludes():
+def standard_wx_excludes() -> List[str]:
     return [
         "wx.py",
         "wx.stc",
     ]
 
 
-def sqlite_sqlalchemy_excludes():
+def sqlite_sqlalchemy_excludes() -> List[str]:
     return [
         "sqlalchemy.testing",
         "sqlalchemy.dialects.postgresql",
@@ -673,7 +687,7 @@ def sqlite_sqlalchemy_excludes():
     ]
 
 
-def app_framework_excludes():
+def app_framework_excludes() -> List[str]:
     return [
         "watchdog",
         "yappi",
@@ -683,7 +697,7 @@ def app_framework_excludes():
     ]
 
 
-def stdlib_excludes(pdb=True):
+def stdlib_excludes(pdb: bool = True) -> List[str]:
     res = [
         "doctest",
         "email.test",
@@ -698,7 +712,7 @@ def stdlib_excludes(pdb=True):
     return res
 
 
-def win32_excludes():
+def win32_excludes() -> List[str]:
     return [
         "win32pipe",
         "win32wnet",
@@ -706,7 +720,7 @@ def win32_excludes():
     ]
 
 
-def get_datafiles(directory="share", match="*", target_path=None):
+def get_datafiles(directory: Path = "share", match: str = "*", target_path: Optional[str] = None) -> DataFiles:
     """builds list of data files to be included with data_files in setuptools
     A typical task in a setup.py file is to set the path and name of a list
     of data files to provide with the package. For instance files in share/data
@@ -741,10 +755,10 @@ def get_datafiles(directory="share", match="*", target_path=None):
     return datafiles
 
 
-def pytz_datafiles():
-    import pytz
+def pytz_datafiles() -> DataFiles:
+    pytz = importlib.import_module("pytz")
 
-    path = os.path.join(os.path.split(pytz.__file__)[0], "zoneinfo")
+    path = os.path.join(os.path.split(cast(str, pytz.__file__))[0], "zoneinfo")
     print("Collecting pytz datafiles from: %s" % path)
     files = get_datafiles(path, "*")
     index = path.index("zoneinfo")
@@ -753,10 +767,10 @@ def pytz_datafiles():
     return files
 
 
-def enchant_datafiles():
-    import enchant
+def enchant_datafiles() -> DataFiles:
+    enchant = importlib.import_module("enchant")
 
-    enchant_path = os.path.split(enchant.__file__)[0]
+    enchant_path = os.path.split(cast(str, enchant.__file__))[0]
     print("Collecting enchant datafiles from: %s" % enchant_path)
 
     dll_files = get_datafiles(enchant_path, "*.dll")
@@ -779,7 +793,7 @@ def enchant_datafiles():
     return files
 
 
-DATAFILE_REGISTRY = {
+DATAFILE_REGISTRY: Dict[str, Callable[[], DataFiles]] = {
     "enchant": enchant_datafiles,
     "pytz": pytz_datafiles,
 }

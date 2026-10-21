@@ -1,8 +1,8 @@
 # Goal
 
-Measure the full configured installer_builder mypy baseline after the bounded
+Resolve the full configured installer_builder typing baseline after the bounded
 range/target compatibility change landed separately in #7. Preserve package
->=3.8.6, mypy target 3.8 and every existing strict setting.
+>=3.8.6, mypy target 3.8, public behavior and every existing strict setting.
 
 # State
 
@@ -12,10 +12,13 @@ fad12d9a3eafa59fcd6033e54534c4eee3ed2fb7 using --no-update-refs. The last
 recorded completed measurement is run 39555011151 at published source head
 cde0f5c85b442e727583f06a6eeec352eaa0003a, detailed below. Live PR checks are
 authoritative for later heads; that measurement is not a promised later result.
-The delta adds only the same three-line full-package gate in the existing
-Windows Python 3.8 leg. The merged base now supplies mypy>=0.991,<1.15 and
-the unchanged three-case target/API/config probes on tool Python 3.8 and 3.13.
-No full package checker command has run locally.
+The baseline gate remains unchanged in the existing Windows Python 3.8 leg.
+The merged base supplies mypy>=0.991,<1.15 and the unchanged three-case
+target/API/config probes on tool Python 3.8 and 3.13. The authorized source
+repair now annotates the four production modules and adds only the proven
+Python 3.8-compatible types-setuptools development stub. The completed cde
+measurement remains the last recorded result; no green result is inferred for
+this source candidate. No full package checker command has run locally.
 
 # Decisions and why
 
@@ -43,6 +46,47 @@ No full package checker command has run locally.
   resolved one adjacent-step workflow conflict by keeping both unchanged probes
   followed by exactly one existing full-package command; no other hunk changed.
 
+# Typing repair decisions and actual boundaries
+
+- Annotate all 89 previously reported definitions and the six untyped container
+  sites with Python 3.8 typing forms: concrete string collections, data-file
+  tuples, generators, paths, optional lifecycle state and return types. Keep
+  implicit None fallthroughs explicit without adding new fallback values.
+- Path aliases quote os.PathLike[str] so alias evaluation does not require
+  Python 3.9 runtime generics. Actual os/path-only input surfaces accept string
+  or PathLike paths; legacy chop/dist_dir operations still require strings.
+  Application.name is a read-only protocol property; srcname accepts modules,
+  dotted strings and the existing __file__ duck-typed input. InnoScript metadata
+  is object because it is inspected with dir/getattr and existing tests supply
+  SimpleNamespace, not only DistributionMetadata.
+- Command dist_dir remains Optional during initialize_options. The narrow
+  casts at run/signing use the real distutils lifecycle: Distribution.run_command
+  calls ensure_finalized before run, and each finalize_options supplies dist.
+  Direct invalid calls retain their old failures; no new runtime guard is added.
+  Likewise build() sets build_start_time before both reporting paths and calls
+  build_installer's existing name validation before finalization. Casts express
+  those cross-method facts without changing initialization or validation.
+- Keep Any only at actual external dynamic boundaries: extensible setuptools/
+  py2exe keyword dictionaries, forwarded application **kwargs, public metadata
+  dir/getattr values and native registry values/defaults. Internal file lists,
+  command options, translations, script lines and generated metadata are typed.
+- Optional Babel/pytz/certifi/enchant helpers consume only package __path__ or
+  __file__, not provider APIs. Use the existing importlib.import_module pattern
+  and stdlib module metadata types. Each real import still executes at the same
+  feature point and fails normally when absent; no provider or native Enchant
+  installation is added solely to satisfy a checker. File-backed provider path
+  casts retain the same invalid-metadata failures rather than inventing paths.
+- Add types-setuptools==75.8.0.20250110 only to the existing optional dev extra.
+  Its official PyPI metadata requires >=3.8, has no dependencies and records
+  testing with mypy 1.14.1. It types actual setup/find_packages APIs; no runtime
+  dependency, mypy option, ignored module, coverage or workflow is weakened.
+  On supported Python >=3.8, import builtins directly under the existing alias
+  rather than probing the obsolete Python 2 __builtin__ module.
+- No runtime defect was established in this repair. The small executable edits
+  are import spelling, identity casts, local variable separation for registry
+  root names/handles, and explicit existing None fallthroughs. No new signing,
+  build, compiler, native, data-generation or optional-feature policy is added.
+
 # Preservation
 
 backup/task6-installer-mypy-original-pr preserves original PR #4 head
@@ -61,6 +105,8 @@ or forced through duplicate conflicts. Original PR #4 remains unchanged.
 These earlier archive tips are historical. Named
 archive/task6-installer-mypy-baseline-measurement-cde0f5c8 preserves the exact
 cde0f5c85b442e727583f06a6eeec352eaa0003a measured tip before this note correction.
+archive/task6-installer-mypy-baseline-before-typing preserves exact
+76332cebdb1eaac1400427daf73b3b4bafd87b6c before these source annotations.
 
 # Verification
 
@@ -83,18 +129,29 @@ Python 3.14 build succeeded. This remains a red full-package baseline. Actual
 review approved the workflow source hunk and requested only this stale-note
 correction. No local full checker, tests/build or installer/signing action ran,
 including for this note-only correction.
-Complete delta inspection confirms the same three-line unsuppressed gate and
-no delta to merged source, tests, manifest, probe assertions or strict flags.
+At the recorded cde measurement, delta inspection confirmed the same three-line
+unsuppressed gate without source/test/manifest/probe/strict-setting changes.
 After resolving the adjacent-step conflict, actionlint 1.7.12 again exited 0
 and offline pedantic zizmor 1.31.1 reported no findings. No local test or
 checker execution was added to that static workflow verification.
 
+For this source candidate, every existing production definition was inspected
+and annotated, including all reported no-untyped-def/container sites. Known
+import complaints are addressed through the real setuptools stub, supported
+builtins import and module-path boundaries. Optional path/timing/platform
+assignments are typed according to their actual lifecycles. This is an estimate
+of addressed source sites, not a checker result or count prediction: newly
+exposed precise-type diagnostics may need hosted feedback. No local checker,
+tests/build, optional provider import or native action ran. No regression was
+added merely to mirror annotations; existing 71 tests and both three-case
+compatibility probes remain intact. The workflow is byte-for-byte unchanged.
+
 # Next step
 
-Next engineering work is bounded genuine typing repair informed by the actual
-diagnostics and source/callers, preserving configured checks and strict flags.
-This note correction authorizes no broad annotation migration or suppression.
-Keep original #4, the redundant stacked candidate and canonical work unchanged.
-PR #5 remains open/unmerged; do not merge until the relevant full check is green
-and source review is complete. Live checks govern later heads. No model, remote
-write, source/config/test changes or merge occurred for this correction.
+Return this coherent source/manifest/note delta for coordinator review before
+guarded publication and the first hosted measurement of these annotations.
+Resolve any remaining accurate-type diagnostics under the unchanged full gate;
+do not suppress, weaken flags or shrink coverage. Keep original #4, the redundant
+stacked candidate and canonical work unchanged. PR #5 remains open/unmerged;
+no merge until the relevant full check is green and source review is complete.
+Live checks govern later heads. No model, remote write or merge ran here.

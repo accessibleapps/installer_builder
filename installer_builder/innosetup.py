@@ -165,7 +165,7 @@ History
 
 """
 
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, annotations, print_function
 import distutils.command
 import distutils.core
 
@@ -184,6 +184,15 @@ import winreg
 import shutil
 from xml.etree import ElementTree
 from zipfile import ZIP_DEFLATED, ZipFile
+from types import ModuleType
+from typing import Any, Dict, IO, Iterable, Iterator, List, Optional, Protocol, Tuple, Union, cast
+
+Path = Union[str, "os.PathLike[str]"]
+
+
+class SourceModule(Protocol):
+    @property
+    def __file__(self) -> Optional[str]: ...
 
 import win32api  # for read pe32 resource
 
@@ -272,7 +281,7 @@ MANIFEST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     </application>
 </assembly>"""
 
-def manifest(name, res_id=1):
+def manifest(name: Optional[str], res_id: int = 1) -> Tuple[int, int, bytes]:
     """Create a manifest resource with the given name."""
     data = MANIFEST_TEMPLATE % name
     return RT_MANIFEST, res_id, data.encode('utf-8')
@@ -281,24 +290,25 @@ def manifest(name, res_id=1):
 README_EXT = ".html"
 
 
-def load_manifest(handle):
+def load_manifest(handle: int) -> Optional[str]:
     """get the first manifest string from HMODULE"""
     for restype in (RT_MANIFEST,):  # win32api.EnumResourceTypes(handle)
         for name in win32api.EnumResourceNames(handle, restype):
             return win32api.LoadResource(handle, restype, name).decode("utf_8")
+    return None
 
 
-def srcname(dottedname):
+def srcname(dottedname: Union[str, ModuleType, SourceModule]) -> str:
     """get the source filename from importable name or module"""
     if hasattr(dottedname, "__file__"):
-        module = dottedname
+        module = cast(SourceModule, dottedname)
     else:
-        names = dottedname.split(".")
+        names = cast(str, dottedname).split(".")
         module = __import__(names.pop(0))
         for name in names:
             module = getattr(module, name)
 
-    filename = module.__file__
+    filename = cast(str, module.__file__)
     name, ext = os.path.splitext(filename)
     ext = ext.lower()
 
@@ -315,22 +325,22 @@ def srcname(dottedname):
     raise ValueError(f"Source file not found for {dottedname}")
 
 
-def srcnames(*args):
+def srcnames(*args: Union[str, ModuleType, SourceModule]) -> List[str]:
     """get the source filename from importable name or module"""
     return [srcname(i) for i in args]
 
 
-def modname(handle):
+def modname(handle: int) -> str:
     """get module filename from HMODULE"""
     b = ctypes.create_unicode_buffer("", 1024)
     ctypes.windll.kernel32.GetModuleFileNameW(handle, b, 1024)
     return b.value
 
 
-def findfiles(filenames, *conditions):
+def findfiles(filenames: Iterable[str], *conditions: str) -> List[str]:
     """filter `filenames` by conditions"""
 
-    def check(filename):
+    def check(filename: str) -> Optional[bool]:
         filename = filename.lower()
         for i in conditions:
             i = i.lower()
@@ -358,7 +368,7 @@ hkshortnames = {
 }
 
 
-def getregvalue(path, default=None):
+def getregvalue(path: str, default: Any = None) -> Any:
     """get registry value
 
     noname value
@@ -369,11 +379,11 @@ def getregvalue(path, default=None):
     >>> getregvalue('HKEY_CLASSES_ROOT\\.py\\Content Type')
     ''text/plain
     """
-    root, subkey = path.split("\\", 1)
-    if root.startswith("HKEY_"):
-        root = getattr(winreg, root)
-    elif root in hkshortnames:
-        root = hkshortnames[root]
+    root_name, subkey = path.split("\\", 1)
+    if root_name.startswith("HKEY_"):
+        root = getattr(winreg, root_name)
+    elif root_name in hkshortnames:
+        root = hkshortnames[root_name]
     else:
         root = winreg.HKEY_CURRENT_USER
         subkey = path
@@ -395,7 +405,7 @@ class IssFile(io.TextIOWrapper):
         "Flags",
     ]
 
-    def __init__(self, filename, mode='w', encoding='utf-8'):
+    def __init__(self, filename: Path, mode: str = 'w', encoding: str = 'utf-8') -> None:
         # Open a buffered binary file and wrap it
         binary_file = open(filename, mode.replace('t', '') + 'b')
         super().__init__(binary_file, encoding=encoding)
@@ -403,7 +413,7 @@ class IssFile(io.TextIOWrapper):
         if 'w' in mode and encoding.lower() == 'utf-8':
             self.write('\ufeff')  # UTF-8 BOM
 
-    def issline(self, **kwargs):
+    def issline(self, **kwargs: object) -> None:
         args = []
         for k, v in kwargs.items():
             if k not in self.noescape:
@@ -464,11 +474,11 @@ class InnoScript(object):
         ".dll",
         ".pyd",
     )
-    iss_metadata = {}
+    iss_metadata: Dict[str, str] = {}
 
-    def __init__(self, dist_dir, metadata, inno_script, inno_setup_exe=None, 
-                 bundle_vcr=True, register_startup=False, zip_option=False, 
-                 extra_inno_script=None):
+    def __init__(self, dist_dir: str, metadata: object, inno_script: str, inno_setup_exe: Optional[Path] = None,
+                 bundle_vcr: Union[bool, str] = True, register_startup: Union[bool, str] = False, zip_option: Union[bool, str] = False,
+                 extra_inno_script: Optional[str] = None) -> None:
         """Initialize the InnoScript with the necessary parameters.
         
         Args:
@@ -503,10 +513,10 @@ class InnoScript(object):
         # Scan the dist directory to find files
         self.created_files = self._scan_dist_dir()
 
-    def parse_iss(self, s):
+    def parse_iss(self, s: str) -> Iterator[Tuple[str, str, List[str]]]:
         firstline = ""
         sectionname = ""
-        lines = []
+        lines: List[str] = []
         for line in s.splitlines():
             if line.startswith("[") and "]" in line:
                 if lines:
@@ -519,7 +529,7 @@ class InnoScript(object):
         if lines:
             yield firstline, sectionname, lines
 
-    def chop(self, filename, dirname=""):
+    def chop(self, filename: str, dirname: str = "") -> str:
         """get relative path"""
         if not dirname:
             dirname = self.dist_dir
@@ -531,9 +541,9 @@ class InnoScript(object):
         # filename = os.path.basename(filename)
         return filename
 
-    def _scan_dist_dir(self):
+    def _scan_dist_dir(self) -> Dict[str, List[str]]:
         """Scan the dist directory to categorize files."""
-        results = {
+        results: Dict[str, List[str]] = {
             'executables': [],
             'windows_exes': [],
             'com_servers': [],
@@ -572,7 +582,7 @@ class InnoScript(object):
         return results
 
     @property
-    def metadata(self):
+    def metadata(self) -> Dict[str, Any]:
         """Get metadata as a dictionary."""
         metadata = {}
         for attr in dir(self._metadata):
@@ -582,7 +592,7 @@ class InnoScript(object):
         return metadata
 
     @property
-    def appid(self):
+    def appid(self) -> str:
         """Generate a consistent AppID based on metadata."""
         m = self.metadata
         if m["url"]:
@@ -597,13 +607,13 @@ class InnoScript(object):
         return f"{{{appid}}}"
 
     @property
-    def iss_consts(self):
+    def iss_consts(self) -> Dict[str, str]:
         """Get constants for the ISS file."""
         metadata = self.metadata
         return dict((k, v % metadata) for k, v in self.consts_map.items())
 
     @property
-    def innoexepath(self):
+    def innoexepath(self) -> Path:
         """Find the Inno Setup compiler executable."""
         if self._inno_setup_exe and os.path.isfile(self._inno_setup_exe):
             return self._inno_setup_exe
@@ -639,7 +649,7 @@ class InnoScript(object):
         return "ISCC.exe"
 
     @property
-    def msvcfiles(self):
+    def msvcfiles(self) -> List[str]:
         """Get MSVC runtime files if needed.
         
         Note: For modern Python (3.5+), this is usually not needed as py2exe
@@ -680,11 +690,11 @@ class InnoScript(object):
                 
         return files_to_include
 
-    def handle_iss(self, lines, fp):
+    def handle_iss(self, lines: Iterable[str], fp: IO[str]) -> None:
         for line in lines:
             fp.write(line + "\n")
 
-    def handle_iss_setup(self, lines, fp):
+    def handle_iss_setup(self, lines: Iterable[str], fp: IO[str]) -> None:
         metadata = self.metadata
         iss_metadata = dict((k, v % metadata)
                             for k, v in self.metadata_map.items())
@@ -750,7 +760,7 @@ class InnoScript(object):
 
         fp.write("\n")
 
-    def handle_iss_files(self, lines, fp):
+    def handle_iss_files(self, lines: List[str], fp: IssFile) -> None:
         """Handle the [Files] section of the ISS file."""
         files = []
         excludes = []
@@ -792,7 +802,7 @@ class InnoScript(object):
                 if filename.startswith(self.dist_dir):
                     place = os.path.dirname(relname)
 
-                extraargs = {}
+                extraargs: Dict[str, object] = {}
             else:  # isdir
                 if filename.startswith(self.dist_dir):
                     place = relname
@@ -809,7 +819,7 @@ class InnoScript(object):
 
         self.handle_iss(lines, fp)
 
-    def _iter_bin_files(self, category, lines=[]):
+    def _iter_bin_files(self, category: str, lines: List[str] = []) -> Iterator[Tuple[str, str]]:
         """Iterate over binary files of a specific category."""
         for filename in self.created_files.get(category, []):
             relname = self.chop(filename)
@@ -817,7 +827,7 @@ class InnoScript(object):
                 continue
             yield filename, relname
 
-    def handle_iss_run(self, lines, fp):
+    def handle_iss_run(self, lines: List[str], fp: IssFile) -> None:
         """Handle the [Run] section of the ISS file."""
         # Process COM servers
         for _, filename in self._iter_bin_files("com_servers", lines):
@@ -861,7 +871,7 @@ class InnoScript(object):
                 
         self.handle_iss(lines, fp)
 
-    def handle_iss_uninstallrun(self, lines, fp):
+    def handle_iss_uninstallrun(self, lines: List[str], fp: IssFile) -> None:
         """Handle the [UninstallRun] section of the ISS file."""
         # Process COM servers
         for _, filename in self._iter_bin_files("com_servers", lines):
@@ -905,7 +915,7 @@ class InnoScript(object):
                 
         self.handle_iss(lines, fp)
 
-    def handle_iss_icons(self, lines, fp):
+    def handle_iss_icons(self, lines: List[str], fp: IssFile) -> None:
         """Handle the [Icons] section of the ISS file."""
         # Find the main executable to use for shortcuts
         main_exe = None
@@ -944,7 +954,7 @@ class InnoScript(object):
             
         self.handle_iss(lines, fp)
 
-    def handle_iss_tasks(self, lines, fp):
+    def handle_iss_tasks(self, lines: List[str], fp: IssFile) -> None:
         """Handle the [Tasks] section of the ISS file."""
         fp.issline(
             Name="desktopicon",
@@ -961,7 +971,7 @@ class InnoScript(object):
             
         self.handle_iss(lines, fp)
 
-    def handle_iss_registry(self, lines, fp):
+    def handle_iss_registry(self, lines: List[str], fp: IssFile) -> None:
         """Handle the [Registry] section of the ISS file."""
         if self.register_startup:
             # Find the main executable
@@ -986,7 +996,7 @@ class InnoScript(object):
                 
         self.handle_iss(lines, fp)
 
-    def handle_iss_languages(self, lines, fp):
+    def handle_iss_languages(self, lines: List[str], fp: IssFile) -> None:
         self.handle_iss(lines, fp)
 
         if lines:
@@ -1003,11 +1013,11 @@ class InnoScript(object):
                     MessagesFile="compiler:%s" % filename,
                 )
 
-    def handle_iss_code(self, lines, fp):
+    def handle_iss_code(self, lines: List[str], fp: IssFile) -> None:
         self.handle_iss(lines, fp)
         fp.write(DEFAULT_CODES)
 
-    def create(self):
+    def create(self) -> None:
         """Create the Inno Setup script file."""
         fp = IssFile(self.issfile, "wt")
         fp.write('; This file is created by py2exe InnoSetup extension.\n')
@@ -1047,7 +1057,7 @@ class InnoScript(object):
                 handler([], fp)
                 fp.write("\n")
 
-    def compile_script(self):
+    def compile_script(self) -> str:
         """Compile the Inno Setup script into an installer."""
         try:
             subprocess.check_call([self.innoexepath, self.issfile])
@@ -1075,14 +1085,14 @@ class InnoScript(object):
             return setupfile
 
     @property
-    def setup_file_path(self):
+    def setup_file_path(self) -> str:
         return os.path.join(
             self.output_dir,
             self.iss_metadata.get("OutputBaseFilename", "setup") + ".exe",
         )
 
     @property
-    def output_dir(self):
+    def output_dir(self) -> str:
         return self.iss_metadata.get(
             "OutputDir", os.path.join(os.path.dirname(self.issfile), "Output")
         )
@@ -1108,20 +1118,20 @@ class innosetup(distutils.core.Command):
     
     boolean_options = ["bundle_vcr", "zip", "register_startup"]
 
-    def initialize_options(self):
+    def initialize_options(self) -> None:
         """Initialize command options."""
-        self.inno_setup_exe = None
-        self.inno_script = DEFAULT_ISS
-        self.extra_inno_script = None
-        self.certificate_file = None
-        self.certificate_password = None
-        self.extra_sign = []
-        self.bundle_vcr = False  # Default to False for modern Python
-        self.zip = False
-        self.register_startup = False
-        self.dist_dir = None
+        self.inno_setup_exe: Optional[Path] = None
+        self.inno_script: Optional[str] = DEFAULT_ISS
+        self.extra_inno_script: Optional[str] = None
+        self.certificate_file: Optional[Path] = None
+        self.certificate_password: Optional[str] = None
+        self.extra_sign: Union[str, List[Path]] = []
+        self.bundle_vcr: Union[bool, str] = False  # Default to False for modern Python
+        self.zip: Union[bool, str] = False
+        self.register_startup: Union[bool, str] = False
+        self.dist_dir: Optional[str] = None
         
-    def finalize_options(self):
+    def finalize_options(self) -> None:
         """Finalize command options."""
         self.set_undefined_options('bdist', ('dist_dir', 'dist_dir'))
         if self.dist_dir is None:
@@ -1147,7 +1157,7 @@ class innosetup(distutils.core.Command):
         if isinstance(self.extra_sign, str):
             self.extra_sign = [self.extra_sign]
 
-    def _find_inno_setup(self):
+    def _find_inno_setup(self) -> Optional[Path]:
         """Find the Inno Setup compiler."""
         if self.inno_setup_exe and os.path.isfile(self.inno_setup_exe):
             return self.inno_setup_exe
@@ -1181,7 +1191,7 @@ class innosetup(distutils.core.Command):
                     
         return None  # Not found
 
-    def run(self):
+    def run(self) -> None:
         """Run the command: build the installer."""
         # First, run py2exe to create the executable
         self.run_command('py2exe')
@@ -1211,7 +1221,7 @@ class innosetup(distutils.core.Command):
             
         # Create the InnoScript instance
         script = InnoScript(
-            dist_dir=self.dist_dir,
+            dist_dir=cast(str, self.dist_dir),  # finalized by distutils before run()
             metadata=self.distribution.metadata,
             inno_script=inno_script_content,
             inno_setup_exe=inno_exe_path,
@@ -1235,10 +1245,11 @@ class innosetup(distutils.core.Command):
         if self.certificate_file:
             self.sign_executable(setup_file)
 
-    def sign_executables(self):
+    def sign_executables(self) -> None:
         """Sign all executables in the dist directory."""
         # Find all executables in the dist directory
-        for root, _, files in os.walk(self.dist_dir):
+        dist_dir = cast(str, self.dist_dir)  # finalized before run()
+        for root, _, files in os.walk(dist_dir):
             for file in files:
                 if file.lower().endswith('.exe'):
                     self.sign_executable(os.path.join(root, file))
@@ -1246,9 +1257,9 @@ class innosetup(distutils.core.Command):
         # Sign any extra files specified
         if self.extra_sign:
             for extra in self.extra_sign:
-                self.sign_executable(os.path.join(self.dist_dir, extra))
+                self.sign_executable(os.path.join(dist_dir, extra))
 
-    def sign_executable(self, exepath):
+    def sign_executable(self, exepath: Path) -> None:
         """Sign a single executable."""
         if not os.path.exists(exepath):
             raise FileNotFoundError(f"File to sign not found: {exepath}")
