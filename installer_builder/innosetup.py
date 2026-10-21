@@ -303,7 +303,7 @@ def srcname(dottedname: Union[str, ModuleType, SourceModule]) -> str:
     if hasattr(dottedname, "__file__"):
         module = cast(SourceModule, dottedname)
     else:
-        names = cast(str, dottedname).split(".")
+        names = dottedname.split(".")
         module = __import__(names.pop(0))
         for name in names:
             module = getattr(module, name)
@@ -346,13 +346,13 @@ def findfiles(filenames: Iterable[str], *conditions: str) -> List[str]:
             i = i.lower()
             if i.startswith("."):  # compare ext
                 if os.path.splitext(filename)[1] != i:
-                    return
+                    return None
             elif i.count(".") == 1:  # compare basename
                 if os.path.basename(filename) != i:
-                    return
+                    return None
             else:  # contains
                 if i not in os.path.basename(filename):
-                    return
+                    return None
         return True
 
     return [i for i in filenames if check(i)]

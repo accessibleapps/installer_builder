@@ -9,15 +9,15 @@ range/target compatibility change landed separately in #7. Preserve package
 Published PR #5 remains open and unmerged, with full typing work remaining.
 repair/task6-installer-mypy-baseline was genuinely rebased onto merged master
 fad12d9a3eafa59fcd6033e54534c4eee3ed2fb7 using --no-update-refs. The last
-recorded completed measurement is run 39555011151 at published source head
-cde0f5c85b442e727583f06a6eeec352eaa0003a, detailed below. Live PR checks are
+recorded completed measurement is run 39563222831 at published source head
+bbf7a823aab11ea59728e580217d5c0f81d7aafb, detailed below. Live PR checks are
 authoritative for later heads; that measurement is not a promised later result.
 The baseline gate remains unchanged in the existing Windows Python 3.8 leg.
 The merged base supplies mypy>=0.991,<1.15 and the unchanged three-case
 target/API/config probes on tool Python 3.8 and 3.13. The authorized source
 repair now annotates the four production modules and adds only the proven
-Python 3.8-compatible types-setuptools development stub. The completed cde
-measurement remains the last recorded result; no green result is inferred for
+Python 3.8-compatible types-setuptools development stub. The completed first
+annotation measurement remains the last recorded result; no green result is inferred for
 this source candidate. No full package checker command has run locally.
 
 # Decisions and why
@@ -34,7 +34,7 @@ this source candidate. No full package checker command has run locally.
   altered strict flags, target substitution, skip or mass annotation is added.
   Existing source contains unannotated definitions; hosted CI must establish
   actual diagnostics before deciding any bounded baseline repair.
-  The latest recorded run 39555011151 at cde0f5c8 established the diagnostic
+  The latest recorded run 39563222831 at bbf7a823 established the diagnostic
   snapshot detailed in Verification below.
 - The existing Windows 3.8/3.14 test/build axes, check names, action pins,
   permissions, checkout credentials policy, timeout and concurrency remain.
@@ -86,6 +86,16 @@ this source candidate. No full package checker command has run locally.
   are import spelling, identity casts, local variable separation for registry
   root names/handles, and explicit existing None fallthroughs. No new signing,
   build, compiler, native, data-generation or optional-feature policy is added.
+- First hosted annotation feedback left six errors. Remove the now-proven
+  redundant dottedname cast and spell the three existing bare returns as None.
+  DistributionMetadata name/version are genuinely nullable; do not cast away
+  that state or use getters that invent UNKNOWN/0.0.0. At the final join boundary
+  explicitly narrow both captured values to str, retaining TypeError for invalid
+  values with join's existing sequence-item/type-name message. Valid string
+  metadata comes from the existing Distribution producer in test_new_inno.py;
+  the type checks preserve the accepted input set instead of asserting that
+  every Distribution always has valid metadata. This exposes the existing
+  string-join contract without a new runtime feature or a suppression.
 
 # Preservation
 
@@ -112,6 +122,8 @@ archive/task6-installer-mypy-baseline-measurement-cde0f5c8 preserves the exact
 cde0f5c85b442e727583f06a6eeec352eaa0003a measured tip before this note correction.
 archive/task6-installer-mypy-baseline-before-typing preserves exact
 76332cebdb1eaac1400427daf73b3b4bafd87b6c before these source annotations.
+archive/task6-installer-mypy-baseline-first-typing-bbf7a82 preserves exact
+bbf7a823aab11ea59728e580217d5c0f81d7aafb before the focused six-error follow-up.
 
 # Verification
 
@@ -124,7 +136,7 @@ had 112 diagnostics with mypy 0.991 in run 39552363115 after the three helper
 diagnostics disappeared; both 71-test suites passed. These are historical
 results under the old <1.0 range. Actual #7
 landed the narrower compatible <1.15 range and bounded probes separately.
-The last recorded completed measurement, run 39555011151 at exact cde0f5c8,
+The historical pre-annotation measurement, run 39555011151 at exact cde0f5c8,
 selected mypy 1.14.1 and failed with 106 errors in four package files.
 Diagnostic classes: 89 no-untyped-def, 6 var-annotated, 3 import-untyped,
 3 import-not-found, 3 arg-type, 1 assignment and 1 operator.
@@ -151,10 +163,19 @@ tests/build, optional provider import or native action ran. No regression was
 added merely to mirror annotations; existing 71 tests and both three-case
 compatibility probes remain intact. The workflow is byte-for-byte unchanged.
 
+Last recorded completed source measurement on 2026-10-21: run 39563222831 at
+exact bbf7a823aab11ea59728e580217d5c0f81d7aafb. Both 71-test suites passed;
+all three probe cases passed with mypy 1.14.1 on Python 3.8.20 and 3.13.16.
+The Python 3.14 build passed; the full checker remained red with six errors in
+two files (two list-item, one redundant-cast, three return-value). Python 3.8
+build was skipped after that failure. The focused follow-up addresses those
+exact six source sites; its result must come from the next hosted run. No
+local checker, tests/build, provider import, signing or native action ran.
+
 # Next step
 
-Return this coherent source/manifest/note delta for coordinator review before
-guarded publication and the first hosted measurement of these annotations.
+Return this focused two-source-file/note follow-up for coordinator review
+before guarded publication and the next hosted full-package measurement.
 Resolve any remaining accurate-type diagnostics under the unchanged full gate;
 do not suppress, weaken flags or shrink coverage. Keep original #4, the redundant
 stacked candidate and canonical work unchanged. PR #5 remains open/unmerged;

@@ -45,9 +45,15 @@ def create_installer_config(builder_instance: InstallerCommand, dist_dir: Path) 
     installer.run_at_startup = builder_instance.register_startup
     
     # Set output filename
+    app_name, app_version = installer.app_name, installer.app_version
+    # The existing join requires strings; retain its TypeError for invalid metadata.
+    if not isinstance(app_name, str):
+        raise TypeError(f"sequence item 0: expected str instance, {type(app_name).__name__} found")
+    if not isinstance(app_version, str):
+        raise TypeError(f"sequence item 1: expected str instance, {type(app_version).__name__} found")
     installer_filename = "-".join([
-        installer.app_name, 
-        installer.app_version, 
+        app_name,
+        app_version,
         'setup'
     ])
     installer.output_base_filename = installer_filename
