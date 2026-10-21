@@ -31,7 +31,8 @@ No full package checker command has run locally.
   altered strict flags, target substitution, skip or mass annotation is added.
   Existing source contains unannotated definitions; hosted CI must establish
   actual diagnostics before deciding any bounded baseline repair.
-  The first hosted baseline has now established those diagnostics below.
+  The latest recorded run 39555011151 at cde0f5c8 established the diagnostic
+  snapshot detailed in Verification below.
 - The existing Windows 3.8/3.14 test/build axes, check names, action pins,
   permissions, checkout credentials policy, timeout and concurrency remain.
   A failing baseline step prevents that leg's later build in the usual way;
@@ -73,8 +74,10 @@ diagnostics disappeared; both 71-test suites passed. These are historical
 results under the old <1.0 range. Actual #7
 landed the narrower compatible <1.15 range and bounded probes separately.
 The last recorded completed measurement, run 39555011151 at exact cde0f5c8,
-selected mypy 1.14.1 and failed with 106 errors in four package files. Both
-71-test suites passed, as did all three compatibility cases on tool Python 3.8
+selected mypy 1.14.1 and failed with 106 errors in four package files.
+Diagnostic classes: 89 no-untyped-def, 6 var-annotated, 3 import-untyped,
+3 import-not-found, 3 arg-type, 1 assignment and 1 operator.
+Both 71-test suites passed, as did all three compatibility cases on tool Python 3.8
 and 3.13. The Python 3.8 build was skipped after the full-check failure; the
 Python 3.14 build succeeded. This remains a red full-package baseline. Actual
 review approved the workflow source hunk and requested only this stale-note
