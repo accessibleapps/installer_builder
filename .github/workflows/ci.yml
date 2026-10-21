@@ -41,6 +41,9 @@ jobs:
       - name: Check configured mypy target and API compatibility (Python 3.13)
         if: matrix.python == '3.8'
         run: uv run --isolated --python 3.13 --extra dev python checks/mypy_compatibility.py -v
+      - name: Establish configured package mypy baseline
+        if: matrix.python == '3.8'
+        run: uv run --extra dev python -m mypy --config-file pyproject.toml --package installer_builder
       - name: Build wheel and source distribution
         run: uv build
       - name: Require both package artifacts
