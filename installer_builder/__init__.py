@@ -26,6 +26,11 @@ DataFiles = List[Tuple[str, List[str]]]
 Path = Union[str, "os.PathLike[str]"]
 
 
+def hook_jinja2(finder: Any, module: Any) -> None:
+    """Collect the template engine through py2exe's complete-package API."""
+    finder.import_package_later(module.__name__)
+
+
 class Application(Protocol):
     @property
     def name(self) -> str: ...
@@ -577,6 +582,9 @@ class InstallerBuilder(object):
             requested_commands = set(sys.argv[1:])
             if {"py2exe", "innosetup", self.build_command} & requested_commands:
                 import py2exe
+                import py2exe.hooks
+
+                py2exe.hooks.hook_jinja2 = hook_jinja2
 
                 targets = setup_arguments[self.app_type]
                 py2exe.freeze(
