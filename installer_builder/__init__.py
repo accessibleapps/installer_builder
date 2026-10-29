@@ -563,7 +563,10 @@ class InstallerBuilder(object):
 
             # SQLAlchemy's lazy dependency registry imports from strings, so
             # py2exe cannot infer these real modules from import instructions.
-            dependencies = getattr(getattr(sys.modules.get("sqlalchemy"), "util", None), "dependencies", None)
+            sqlalchemy = sys.modules.get("sqlalchemy")
+            if sqlalchemy is None and any(name.startswith("sqlalchemy.") or name == "sqlalchemy" for name in self.includes + self.extra_packages):
+                sqlalchemy = importlib.import_module("sqlalchemy")
+            dependencies = getattr(getattr(sqlalchemy, "util", None), "dependencies", None)
             self.includes.extend(
                 name for name in getattr(dependencies, "_by_key", {}) if name in sys.modules
             )
