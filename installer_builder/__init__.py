@@ -26,6 +26,11 @@ DataFiles = List[Tuple[str, List[str]]]
 Path = Union[str, "os.PathLike[str]"]
 
 
+def hook_jinja2(finder: Any, module: Any) -> None:
+    """Collect the template engine through py2exe's complete-package API."""
+    finder.import_package_later(module.__name__)
+
+
 class Application(Protocol):
     @property
     def name(self) -> str: ...
@@ -156,6 +161,9 @@ class InstallerBuilder(object):
         self.prebuild_message()
         self.remove_previous_build()
         self.build_installer()
+
+        if is_mac and self.build_command in sys.argv[1:] and not skip_finalize:
+            self.create_dmg()
 
         # Check if installer was actually created after running build_installer
         if not skip_finalize and self._installer_was_created():
@@ -355,12 +363,6 @@ class InstallerBuilder(object):
 
     def finalize_build(self) -> None:
         print("Finalizing build...")
-        if platform.system() == "Darwin":
-            self.remove_embedded_interpreter()
-            self.shrink_mac_binaries()
-            self.lipo_file(os.path.join(self.get_app_path(), cast(str, self.name)))
-            self.create_dmg()
-
         # Only move output if installer was created
         try:
             self.move_output()
@@ -387,10 +389,11 @@ class InstallerBuilder(object):
 
     def create_dmg(self) -> None:
         print("Creating .dmg disk image")
-        self.execute_command(
-            "hdiutil create -srcfolder dist/%s.app -size 150m dist/%s"
-            % (self.name, self.installer_filename())
-        )
+        subprocess.check_call([
+            "hdiutil", "create", "-srcfolder",
+            os.path.join(self.dist_dir, "%s.app" % self.name),
+            os.path.join(self.dist_dir, self.installer_filename()),
+        ])
 
     def move_output(self) -> None:
         if not os.path.exists(self.output_directory):
@@ -405,6 +408,12 @@ class InstallerBuilder(object):
         root_dir = self.dist_dir
         if platform.system() == "Darwin":
             root_dir = os.path.join(root_dir, "%s.app" % self.name)
+            # shutil's ZIP writer dereferences framework links and loses modes.
+            destination = os.path.join(self.output_directory, name + ".zip")
+            subprocess.check_call([
+                "/usr/bin/ditto", "-c", "-k", "--sequesterRsrc", root_dir, destination,
+            ])
+            return
         filename = shutil.make_archive(
             name, self.update_archive_format, root_dir=root_dir
         )
@@ -550,8 +559,28 @@ class InstallerBuilder(object):
         }
         if is_mac:
             setup_arguments["app"] = [self.main_module]
+            # Compiled mypyc modules import companion extensions from C,
+            # where modulegraph cannot discover those already-loaded imports.
+            setup_arguments["options"]["py2app"]["includes"].extend(sorted({
+                module.__name__ for name, module in list(sys.modules.items())
+                if name.endswith("__mypyc") and module is not None
+            }))
+            main_window_class = getattr(getattr(self, "application", None), "main_window_class", None)
+            if isinstance(main_window_class, str) and "." in main_window_class:
+                setup_arguments["options"]["py2app"]["packages"] = [main_window_class.split(".")[0]]
+            setup_arguments["options"][self.build_command] = setup_arguments["options"]["py2app"]
         if is_windows:
             from . import innosetup
+
+            # SQLAlchemy's lazy dependency registry imports from strings, so
+            # py2exe cannot infer these real modules from import instructions.
+            sqlalchemy = sys.modules.get("sqlalchemy")
+            if sqlalchemy is None and any(name.startswith("sqlalchemy.") or name == "sqlalchemy" for name in self.includes + self.extra_packages):
+                sqlalchemy = importlib.import_module("sqlalchemy")
+            dependencies = getattr(getattr(sqlalchemy, "util", None), "dependencies", None)
+            self.includes.extend(
+                name for name in getattr(dependencies, "_by_key", {}) if name in sys.modules
+            )
 
             setup_arguments[self.app_type][0]["other_resources"] = (
                 innosetup.manifest(self.name),
@@ -559,6 +588,9 @@ class InstallerBuilder(object):
             requested_commands = set(sys.argv[1:])
             if {"py2exe", "innosetup", self.build_command} & requested_commands:
                 import py2exe
+                import py2exe.hooks
+
+                py2exe.hooks.hook_jinja2 = hook_jinja2
 
                 targets = setup_arguments[self.app_type]
                 py2exe.freeze(
@@ -582,8 +614,10 @@ class InstallerBuilder(object):
 
     def repair_mac_dylib_dependencies(self) -> None:
         """Resolve bundled sibling libraries before re-signing the modified app."""
+        from .mac_bytecode import compile_bundle_sources
+
         bundle = os.path.join(self.dist_dir, "%s.app" % self.name)
-        changed = False
+        changed = compile_bundle_sources(bundle, self.optimization_level)
         for directory, _, filenames in os.walk(bundle):
             for filename in filenames:
                 if not filename.endswith((".dylib", ".so")):
@@ -624,6 +658,8 @@ class AppInstallerBuilder(InstallerBuilder):
         datafiles = kwargs.get("datafiles", [])
         datafile_packages = kwargs.get("datafile_packages", [])
         includes = kwargs.get("includes", [])
+        if getattr(application, "blackhole", False):
+            includes.append("platform_utils.blackhole")
         has_translations = kwargs.get("has_translations", False)
         if has_translations:
             if is_windows:
