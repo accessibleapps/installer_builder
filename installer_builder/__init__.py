@@ -577,6 +577,35 @@ class InstallerBuilder(object):
                 if "py2exe" in requested_commands:
                     return
         setuptools.setup(**setup_arguments)
+        if is_mac and {"py2app", self.build_command} & set(sys.argv[1:]):
+            self.repair_mac_dylib_dependencies()
+
+    def repair_mac_dylib_dependencies(self) -> None:
+        """Resolve bundled sibling libraries before re-signing the modified app."""
+        bundle = os.path.join(self.dist_dir, "%s.app" % self.name)
+        changed = False
+        for directory, _, filenames in os.walk(bundle):
+            for filename in filenames:
+                if not filename.endswith((".dylib", ".so")):
+                    continue
+                binary = os.path.join(directory, filename)
+                dependencies = subprocess.check_output(["otool", "-L", binary], text=True)
+                for dependency in sorted({line.strip().split(" (", 1)[0] for line in dependencies.splitlines()}):
+                    if not dependency.startswith("@rpath/"):
+                        continue
+                    sibling = os.path.basename(dependency)
+                    if sibling == filename or not os.path.isfile(os.path.join(directory, sibling)):
+                        continue
+                    subprocess.check_call([
+                        "install_name_tool", "-change", dependency,
+                        "@loader_path/" + sibling, binary,
+                    ])
+                    changed = True
+        if changed:
+            from py2app.util import codesign_adhoc
+
+            codesign_adhoc(bundle)
+            subprocess.check_call(["codesign", "--verify", "--deep", "--strict", bundle])
 
     def get_copyright(self) -> str:
         return "Copyright ©%d %s" % (datetime.date.today().year, self.author)
