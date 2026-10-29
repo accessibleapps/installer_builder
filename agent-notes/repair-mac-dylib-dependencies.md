@@ -1,0 +1,5 @@
+Goal: Repair bundled Mac sibling dylib references and demonstrate QCast building and launching.
+State: Implementing in installer_builder branch repair/mac-dylib-dependencies. Q approved this repair explicitly. sound_lib PR #15 is separately owned by Q for merging.
+Decisions and why: After py2app finishes, replace an @rpath reference only when its target exists beside the referencing dylib or extension. Use @loader_path and py2app's existing ad-hoc signer, then verify the resulting signature. Preserve external and system dependencies. Estimated shared change: about 30 lines plus focused tests.
+Surprises: py2app/macholib preserves @rpath dependencies while rewriting library IDs; vendor BASS and Opus load before bundling but fail together after packaging. QCast also requires explicit gui package and platform_utils.blackhole inclusion during current build experiments.
+Next step: Add focused tests, publish PR and observe CI, consume exact branch on Mac, rebuild QCast, inspect rewritten references and signature, and launch the bundle. Ordinary builds do not prove scrambled bytecode, DMG, or release readiness.
