@@ -5,6 +5,7 @@ import importlib.util
 import marshal
 from pathlib import Path
 import py_compile
+import shutil
 from types import CodeType
 import zipfile
 
@@ -67,6 +68,10 @@ def compile_bundle_sources(bundle: str, optimization: int) -> bool:
             py_compile.compile(str(source), cfile=str(source.with_suffix(".pyc")), doraise=True, optimize=optimization)
             source.unlink()
             changed = True
+    # Source-backed import caches are obsolete after conversion to adjacent pyc.
+    for cache in list(resources.rglob("__pycache__")):
+        shutil.rmtree(cache)
+        changed = True
     for archive in resources.glob("lib/python*.zip"):
         changed = _compile_archive_sources(archive, optimization) or changed
     # Repair this after compiling site.py: py2app emits an optimized-site

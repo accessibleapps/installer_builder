@@ -1,0 +1,9 @@
+{
+  "producer": "py2app QCast full-package collection after rebuilding its scrambled interpreter",
+  "path": "lib/python3.11/wx/py/__pycache__/frame.cpython-311.pyc",
+  "header_hex": "c47e0d0a0000000074abe36a8e980000",
+  "file_size": 67376,
+  "observed_bundle_magic_hex": "9acd0d0a",
+  "stale_files": 148,
+  "stale_files_under_pycache": 148
+}
