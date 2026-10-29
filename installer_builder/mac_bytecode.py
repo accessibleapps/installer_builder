@@ -40,7 +40,8 @@ def compile_bundle_sources(bundle: str, optimization: int) -> bool:
             changed = True
     # Repair this after compiling site.py: py2app emits an optimized-site
     # link before a Python 3-compatible site.pyc target exists.
-    for link in resources.glob("lib/python*/site.pyo"):
+    for directory in resources.glob("lib/python*"):
+        link = directory / "site.pyo"
         if link.is_symlink() and (resources / "site.pyc").is_file():
             link.unlink()
             (link.parent / "site.pyc").symlink_to("../../site.pyc")
