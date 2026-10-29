@@ -561,6 +561,13 @@ class InstallerBuilder(object):
         if is_windows:
             from . import innosetup
 
+            # SQLAlchemy's lazy dependency registry imports from strings, so
+            # py2exe cannot infer these real modules from import instructions.
+            dependencies = getattr(getattr(sys.modules.get("sqlalchemy"), "util", None), "dependencies", None)
+            self.includes.extend(
+                name for name in getattr(dependencies, "_by_key", {}) if name in sys.modules
+            )
+
             setup_arguments[self.app_type][0]["other_resources"] = (
                 innosetup.manifest(self.name),
             )
