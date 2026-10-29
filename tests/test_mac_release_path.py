@@ -45,3 +45,18 @@ def test_mac_image_uses_builder_paths_and_automatic_size(monkeypatch):
         "hdiutil", "create", "-srcfolder", os.path.join("output", "Test App.app"),
         os.path.join("output", "Test App-2.0.dmg"),
     ])
+
+
+def test_mac_update_archive_preserves_bundle_links(monkeypatch):
+    import os
+
+    call = Mock()
+    monkeypatch.setattr(installer_builder.subprocess, "check_call", call)
+    monkeypatch.setattr(installer_builder.platform, "system", lambda: "Darwin")
+    builder = InstallerBuilder(name="QCast", version="2.0", main_module="main.pyw")
+    builder.create_update_archive()
+    call.assert_called_once_with([
+        "/usr/bin/ditto", "-c", "-k", "--sequesterRsrc",
+        os.path.join(builder.dist_dir, "QCast.app"),
+        os.path.join(builder.output_directory, "QCast-2.0-Darwin.zip"),
+    ])

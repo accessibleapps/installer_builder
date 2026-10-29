@@ -408,6 +408,12 @@ class InstallerBuilder(object):
         root_dir = self.dist_dir
         if platform.system() == "Darwin":
             root_dir = os.path.join(root_dir, "%s.app" % self.name)
+            # shutil's ZIP writer dereferences framework links and loses modes.
+            destination = os.path.join(self.output_directory, name + ".zip")
+            subprocess.check_call([
+                "/usr/bin/ditto", "-c", "-k", "--sequesterRsrc", root_dir, destination,
+            ])
+            return
         filename = shutil.make_archive(
             name, self.update_archive_format, root_dir=root_dir
         )
