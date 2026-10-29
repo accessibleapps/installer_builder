@@ -584,8 +584,10 @@ class InstallerBuilder(object):
 
     def repair_mac_dylib_dependencies(self) -> None:
         """Resolve bundled sibling libraries before re-signing the modified app."""
+        from .mac_bytecode import compile_bundle_sources
+
         bundle = os.path.join(self.dist_dir, "%s.app" % self.name)
-        changed = False
+        changed = compile_bundle_sources(bundle, self.optimization_level)
         for directory, _, filenames in os.walk(bundle):
             for filename in filenames:
                 if not filename.endswith((".dylib", ".so")):
