@@ -157,6 +157,9 @@ class InstallerBuilder(object):
         self.remove_previous_build()
         self.build_installer()
 
+        if is_mac and self.build_command in sys.argv[1:] and not skip_finalize:
+            self.create_dmg()
+
         # Check if installer was actually created after running build_installer
         if not skip_finalize and self._installer_was_created():
             self.finalize_build()
@@ -355,12 +358,6 @@ class InstallerBuilder(object):
 
     def finalize_build(self) -> None:
         print("Finalizing build...")
-        if platform.system() == "Darwin":
-            self.remove_embedded_interpreter()
-            self.shrink_mac_binaries()
-            self.lipo_file(os.path.join(self.get_app_path(), cast(str, self.name)))
-            self.create_dmg()
-
         # Only move output if installer was created
         try:
             self.move_output()
@@ -387,10 +384,11 @@ class InstallerBuilder(object):
 
     def create_dmg(self) -> None:
         print("Creating .dmg disk image")
-        self.execute_command(
-            "hdiutil create -srcfolder dist/%s.app -size 150m dist/%s"
-            % (self.name, self.installer_filename())
-        )
+        subprocess.check_call([
+            "hdiutil", "create", "-srcfolder",
+            os.path.join(self.dist_dir, "%s.app" % self.name),
+            os.path.join(self.dist_dir, self.installer_filename()),
+        ])
 
     def move_output(self) -> None:
         if not os.path.exists(self.output_directory):
@@ -550,6 +548,9 @@ class InstallerBuilder(object):
         }
         if is_mac:
             setup_arguments["app"] = [self.main_module]
+            main_window_class = getattr(getattr(self, "application", None), "main_window_class", None)
+            if isinstance(main_window_class, str) and "." in main_window_class:
+                setup_arguments["options"]["py2app"]["packages"] = [main_window_class.split(".")[0]]
         if is_windows:
             from . import innosetup
 
@@ -624,6 +625,8 @@ class AppInstallerBuilder(InstallerBuilder):
         datafiles = kwargs.get("datafiles", [])
         datafile_packages = kwargs.get("datafile_packages", [])
         includes = kwargs.get("includes", [])
+        if getattr(application, "blackhole", False):
+            includes.append("platform_utils.blackhole")
         has_translations = kwargs.get("has_translations", False)
         if has_translations:
             if is_windows:
