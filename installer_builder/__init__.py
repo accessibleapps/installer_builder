@@ -551,6 +551,7 @@ class InstallerBuilder(object):
             main_window_class = getattr(getattr(self, "application", None), "main_window_class", None)
             if isinstance(main_window_class, str) and "." in main_window_class:
                 setup_arguments["options"]["py2app"]["packages"] = [main_window_class.split(".")[0]]
+            setup_arguments["options"][self.build_command] = setup_arguments["options"]["py2app"]
         if is_windows:
             from . import innosetup
 

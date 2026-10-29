@@ -5,6 +5,22 @@ import installer_builder
 from installer_builder import InstallerBuilder
 
 
+def test_mac_release_receives_py2app_configuration(monkeypatch):
+    monkeypatch.setattr(installer_builder, "is_mac", True)
+    monkeypatch.setattr(installer_builder, "is_windows", False)
+    monkeypatch.setattr(sys, "argv", ["setup.py", "release"])
+    builder = InstallerBuilder(name="QCast", main_module="main.pyw", includes=["platform_utils.blackhole"])
+    monkeypatch.setattr(builder, "find_datafiles", lambda: [])
+    monkeypatch.setattr(builder, "get_command_class", lambda: None)
+    monkeypatch.setattr(builder, "repair_mac_dylib_dependencies", lambda: None)
+    setup = Mock()
+    monkeypatch.setattr(installer_builder.setuptools, "setup", setup)
+    builder.build_installer()
+    options = setup.call_args.kwargs["options"]
+    assert options["release"] is options["py2app"]
+    assert options["release"]["includes"] == ["platform_utils.blackhole"]
+
+
 def test_mac_release_creates_image_before_installer_finalization(monkeypatch):
     monkeypatch.setattr(installer_builder, "is_mac", True)
     monkeypatch.setattr(sys, "argv", ["setup.py", "release"])
