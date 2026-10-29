@@ -9,13 +9,6 @@ import py_compile
 def compile_bundle_sources(bundle: str, optimization: int) -> bool:
     resources = Path(bundle) / "Contents" / "Resources"
     changed = False
-    # py2app still emits a Python 2-era optimized-site link, although it
-    # compiles the target as site.pyc on supported Python 3 runtimes.
-    for link in resources.glob("lib/python*/site.pyo"):
-        if link.is_symlink() and (resources / "site.pyc").is_file():
-            link.unlink()
-            (link.parent / "site.pyc").symlink_to("../../site.pyc")
-            changed = True
     boot = resources / "__boot__.py"
     if boot.is_file():
         tree = ast.parse(boot.read_text(), filename=str(boot))
@@ -44,5 +37,12 @@ def compile_bundle_sources(bundle: str, optimization: int) -> bool:
         if source.is_file() and source.suffix in (".py", ".pyw"):
             py_compile.compile(str(source), cfile=str(source.with_suffix(".pyc")), doraise=True, optimize=optimization)
             source.unlink()
+            changed = True
+    # Repair this after compiling site.py: py2app emits an optimized-site
+    # link before a Python 3-compatible site.pyc target exists.
+    for link in resources.glob("lib/python*/site.pyo"):
+        if link.is_symlink() and (resources / "site.pyc").is_file():
+            link.unlink()
+            (link.parent / "site.pyc").symlink_to("../../site.pyc")
             changed = True
     return changed
