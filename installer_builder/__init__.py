@@ -548,6 +548,12 @@ class InstallerBuilder(object):
         }
         if is_mac:
             setup_arguments["app"] = [self.main_module]
+            # Compiled mypyc modules import companion extensions from C,
+            # where modulegraph cannot discover those already-loaded imports.
+            setup_arguments["options"]["py2app"]["includes"].extend(sorted({
+                module.__name__ for name, module in list(sys.modules.items())
+                if name.endswith("__mypyc") and module is not None
+            }))
             main_window_class = getattr(getattr(self, "application", None), "main_window_class", None)
             if isinstance(main_window_class, str) and "." in main_window_class:
                 setup_arguments["options"]["py2app"]["packages"] = [main_window_class.split(".")[0]]

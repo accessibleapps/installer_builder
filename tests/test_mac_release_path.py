@@ -18,7 +18,7 @@ def test_mac_release_receives_py2app_configuration(monkeypatch):
     builder.build_installer()
     options = setup.call_args.kwargs["options"]
     assert options["release"] is options["py2app"]
-    assert options["release"]["includes"] == ["platform_utils.blackhole"]
+    assert "platform_utils.blackhole" in options["release"]["includes"]
 
 
 def test_mac_release_creates_image_before_installer_finalization(monkeypatch):
