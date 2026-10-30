@@ -24,7 +24,7 @@ classifiers = [
 dependencies = [
     "setuptools",
     # py2app 0.28.10 calls spawn(cmd, verbose=...), which setuptools 84 passes on to subprocess.
-    "setuptools<84; sys_platform == 'darwin'",
+    "setuptools<85; sys_platform == 'darwin'",
     "innosetup_builder @ git+https://github.com/accessibleapps/innosetup_builder.git",
     "py2exe; sys_platform == 'win32'",
     "pywin32; sys_platform == 'win32'",
