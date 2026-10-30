@@ -66,5 +66,5 @@ strict_equality = true
 show_error_codes = true
 
 [[tool.mypy.overrides]]
-module = ["win32clipboard", "win32con", "win32api", "py2exe.*", "py2app.*", "innosetup_builder.*"]
+module = ["win32clipboard", "win32con", "win32api", "py2exe.*", "py2app.*", "macholib.*", "innosetup_builder.*"]
 ignore_missing_imports = true
