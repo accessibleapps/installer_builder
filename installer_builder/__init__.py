@@ -11,6 +11,7 @@ import fnmatch
 import getpass
 import glob
 import importlib
+import json
 import os
 import platform
 import shutil
@@ -389,11 +390,37 @@ class InstallerBuilder(object):
 
     def create_dmg(self) -> None:
         print("Creating .dmg disk image")
-        subprocess.check_call([
-            "hdiutil", "create", "-srcfolder",
-            os.path.join(self.dist_dir, "%s.app" % self.name),
-            os.path.join(self.dist_dir, self.installer_filename()),
-        ])
+        bundle = os.path.join(self.dist_dir, "%s.app" % self.name)
+        image = os.path.join(self.dist_dir, self.installer_filename())
+        subprocess.check_call(["hdiutil", "create", "-srcfolder", bundle, image])
+        identity = os.environ.get("MACOS_SIGNING_IDENTITY")
+        if identity:
+            subprocess.check_call(codesign_command(identity) + [image])
+        profile = os.environ.get("MACOS_NOTARY_PROFILE")
+        if profile:
+            self.notarize(image, bundle, profile)
+
+    def notarize(self, image: str, bundle: str, profile: str) -> None:
+        """Submit the image to Apple and staple the ticket to it and the app."""
+        print("Notarizing %s" % image)
+        credentials = ["--keychain-profile", profile]
+        keychain = os.environ.get("MACOS_SIGNING_KEYCHAIN")
+        if keychain:
+            credentials += ["--keychain", keychain]
+        completed = subprocess.run(
+            ["xcrun", "notarytool", "submit", image, "--wait", "--output-format", "json"] + credentials,
+            stdout=subprocess.PIPE, text=True,
+        )
+        try:
+            submission = json.loads(completed.stdout)
+        except ValueError:
+            submission = {}
+        if submission.get("status") != "Accepted":
+            if "id" in submission:
+                subprocess.call(["xcrun", "notarytool", "log", submission["id"]] + credentials)
+            raise RuntimeError("Notarization of %s failed: %s" % (image, completed.stdout))
+        for target in (image, bundle):
+            subprocess.check_call(["xcrun", "stapler", "staple", target])
 
     def move_output(self) -> None:
         if not os.path.exists(self.output_directory):
@@ -635,10 +662,14 @@ class InstallerBuilder(object):
                         "@loader_path/" + sibling, binary,
                     ])
                     changed = True
-        if changed:
+        identity = os.environ.get("MACOS_SIGNING_IDENTITY")
+        if identity:
+            codesign_developer_id(bundle, identity)
+        elif changed:
             from py2app.util import codesign_adhoc
 
             codesign_adhoc(bundle)
+        if identity or changed:
             subprocess.check_call(["codesign", "--verify", "--deep", "--strict", bundle])
 
     def get_copyright(self) -> str:
@@ -730,6 +761,36 @@ def format_filesize(num: float) -> Optional[str]:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
     return None
+
+
+def codesign_command(identity: str) -> List[str]:
+    command = ["codesign", "--force", "--timestamp", "-s", identity]
+    keychain = os.environ.get("MACOS_SIGNING_KEYCHAIN")
+    if keychain:
+        command += ["--keychain", keychain]
+    return command
+
+
+def codesign_developer_id(bundle: str, identity: str) -> None:
+    """Sign nested code inside-out with the hardened runtime, as notarization requires."""
+    from macholib.util import is_platform_file
+
+    targets = []
+    for directory, _, filenames in os.walk(bundle):
+        parent = os.path.dirname(directory)
+        # A framework is sealed through its version directory, not the .framework root.
+        if os.path.basename(parent) == "Versions" and os.path.dirname(parent).endswith(".framework"):
+            targets.append(directory)
+        elif directory != bundle and directory.endswith((".app", ".bundle")):
+            targets.append(directory)
+        for filename in filenames:
+            path = os.path.join(directory, filename)
+            if not os.path.islink(path) and is_platform_file(path):
+                targets.append(path)
+    # Anything inside a nested bundle is deeper than it, so it is signed first.
+    targets.sort(key=lambda path: path.count(os.sep), reverse=True)
+    for target in targets + [bundle]:
+        subprocess.check_call(codesign_command(identity) + ["--options", "runtime", target])
 
 
 def standard_wx_excludes() -> List[str]:
