@@ -33,6 +33,19 @@ def hook_jinja2(finder: Any, module: Any) -> None:
     finder.import_package_later(module.__name__)
 
 
+def hook_chardet(finder: Any, module: Any) -> None:
+    """Collect native helper modules and archive-readable detection models."""
+    package_path = module.__path__[0]
+    finder.import_package_later(module.__name__)
+    # py2exe's package collection visits only the immediate package members.
+    for subpackage in ("pipeline", "models"):
+        if os.path.isdir(os.path.join(package_path, subpackage)):
+            finder.import_package_later(module.__name__ + "." + subpackage)
+    for filename in sorted(glob.glob(os.path.join(package_path, "models", "*.bin"))):
+        archive_name = module.__name__.replace(".", "/") + "/models/" + os.path.basename(filename)
+        finder.add_datafile_to_zip(archive_name, filename)
+
+
 class Application(Protocol):
     @property
     def name(self) -> str: ...
@@ -619,6 +632,7 @@ class InstallerBuilder(object):
                 import py2exe.hooks
 
                 py2exe.hooks.hook_jinja2 = hook_jinja2
+                py2exe.hooks.hook_chardet = hook_chardet
 
                 targets = setup_arguments[self.app_type]
                 py2exe.freeze(
