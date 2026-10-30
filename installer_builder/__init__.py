@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import time
+import zipfile
 from typing import TYPE_CHECKING, Any, Callable, DefaultDict, Dict, Iterator, List, Mapping, Optional, Protocol, Set, Tuple, Type, Union, cast
 
 if TYPE_CHECKING:
@@ -645,6 +646,7 @@ class InstallerBuilder(object):
 
         bundle = os.path.join(self.dist_dir, "%s.app" % self.name)
         changed = compile_bundle_sources(bundle, self.optimization_level)
+        changed = remove_archived_mach_o(bundle) or changed
         for directory, _, filenames in os.walk(bundle):
             for filename in filenames:
                 if not filename.endswith((".dylib", ".so")):
@@ -761,6 +763,33 @@ def format_filesize(num: float) -> Optional[str]:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
     return None
+
+
+MACH_O_MAGIC = {
+    b"\xfe\xed\xfa\xce", b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe",
+}
+
+
+def remove_archived_mach_o(bundle: str) -> bool:
+    """Drop native libraries that py2app copied into its zipped library.
+
+    They cannot be loaded from inside the zip or signed there, and notarization
+    rejects them; the loadable copies are the data files in Contents/Resources.
+    """
+    changed = False
+    for archive in glob.glob(os.path.join(bundle, "Contents", "Resources", "lib", "python*.zip")):
+        with zipfile.ZipFile(archive) as original:
+            entries = original.infolist()
+            kept = [entry for entry in entries if original.open(entry).read(4) not in MACH_O_MAGIC]
+            if len(kept) == len(entries):
+                continue
+            temporary = archive + ".tmp"
+            with zipfile.ZipFile(temporary, "w") as result:
+                for entry in kept:
+                    result.writestr(entry, original.read(entry))
+        os.replace(temporary, archive)
+        changed = True
+    return changed
 
 
 def codesign_command(identity: str) -> List[str]:

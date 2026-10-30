@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import zipfile
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -48,6 +49,23 @@ def test_bundle_is_signed_inside_out_with_hardened_runtime(tmp_path, monkeypatch
     assert targets[-1] == str(bundle)
     for call in signing.call_args_list:
         assert call.args[0][:-1] == SIGN + ["--options", "runtime"]
+
+
+def test_native_libraries_are_removed_from_zipped_library(tmp_path):
+    lib = tmp_path / "QCast.app" / "Contents" / "Resources" / "lib"
+    lib.mkdir(parents=True)
+    archive = lib / "python311.zip"
+    with zipfile.ZipFile(archive, "w") as created:
+        created.writestr("sound_lib/__init__.pyc", b"bytecode")
+        created.writestr("sound_lib/lib/x64/libbass.dylib", b"\xcf\xfa\xed\xfe" + bytes(28))
+        created.writestr("sound_lib/lib/x86/libbass.dylib", b"\xca\xfe\xba\xbe" + bytes(28))
+        created.writestr("sound_lib/lib/x64/libbass.so", b"\x7fELF" + bytes(28))
+
+    assert installer_builder.remove_archived_mach_o(str(tmp_path / "QCast.app"))
+
+    with zipfile.ZipFile(archive) as result:
+        assert result.namelist() == ["sound_lib/__init__.pyc", "sound_lib/lib/x64/libbass.so"]
+    assert not installer_builder.remove_archived_mach_o(str(tmp_path / "QCast.app"))
 
 
 def test_developer_id_signing_replaces_adhoc_even_without_repairs(tmp_path, monkeypatch, signing):
