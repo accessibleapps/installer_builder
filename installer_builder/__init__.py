@@ -33,6 +33,13 @@ def hook_jinja2(finder: Any, module: Any) -> None:
     finder.import_package_later(module.__name__)
 
 
+def hook_curl_cffi(finder: Any, module: Any) -> None:
+    """Collect the Windows DLLs shipped beside delvewheel-built curl_cffi."""
+    library_path = os.path.join(os.path.dirname(module.__path__[0]), "curl_cffi.libs")
+    for filename in sorted(glob.glob(os.path.join(library_path, "*.dll"))):
+        finder.add_dll(filename)
+
+
 def hook_chardet(finder: Any, module: Any) -> None:
     """Collect native helper modules and archive-readable detection models."""
     package_path = module.__path__[0]
@@ -44,6 +51,22 @@ def hook_chardet(finder: Any, module: Any) -> None:
     for filename in sorted(glob.glob(os.path.join(package_path, "models", "*.bin"))):
         archive_name = module.__name__.replace(".", "/") + "/models/" + os.path.basename(filename)
         finder.add_datafile_to_zip(archive_name, filename)
+
+
+def hook_enchant(finder: Any, module: Any) -> None:
+    """Point Enchant at the native runtime collected outside the code archive."""
+    relative_prefix = os.path.join("data", "mingw64" if sys.maxsize > 2 ** 32 else "mingw32")
+    library = os.path.join(module.__path__[0], relative_prefix, "bin", "libenchant-2.dll")
+    if not os.path.isfile(library):
+        return
+    finder.add_bootcode(
+        "import os, sys\n"
+        "_enchant_prefix = os.path.join(os.path.dirname(sys.executable), %r)\n"
+        "if not (os.environ.get('PYENCHANT_ENCHANT_PREFIX') or os.environ.get('PYENCHANT_LIBRARY_PATH')) "
+        "and os.path.isfile(os.path.join(_enchant_prefix, 'bin', 'libenchant-2.dll')):\n"
+        "    os.environ['PYENCHANT_ENCHANT_PREFIX'] = _enchant_prefix\n"
+        % relative_prefix
+    )
 
 
 class Application(Protocol):
@@ -632,7 +655,9 @@ class InstallerBuilder(object):
                 import py2exe.hooks
 
                 py2exe.hooks.hook_jinja2 = hook_jinja2
+                py2exe.hooks.hook_curl_cffi = hook_curl_cffi
                 py2exe.hooks.hook_chardet = hook_chardet
+                py2exe.hooks.hook_enchant = hook_enchant
 
                 targets = setup_arguments[self.app_type]
                 py2exe.freeze(
